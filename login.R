@@ -1,5 +1,8 @@
 library(shiny)
 library(RMySQL)
+library(dplyr)
+
+source("moduloAdmin.R")
 
 ################################################################################
 ########################    Prueba credenciales   ##############################
@@ -54,6 +57,15 @@ ui <- fluidPage(
   shinyauthr::loginUI(id = "login", title = "Cuestionarios", user_title = "Usuario", 
                       pass_title =  "Contraseña", login_title =  "Iniciar sesión",
                       error_message = "Usuario o contraseña no válida"),
+  
+  uiOutput("ui")
+  
+
+
+  #tableOutput("user_table"),
+  
+
+  
 
 )
 
@@ -68,15 +80,51 @@ server <- function(input, output, session) {
     log_out = reactive(logout_init())
   )
   
+  
+  
   # Llama de forma reactiva para mostrar o no el boton
   logout_init <- shinyauthr::logoutServer(
     id = "logout",
     active = reactive(credenciales()$user_auth)
   )
-  
 
   
+  user_data <- reactive({
+    credenciales()$info
+  })
+  
+  #output$user_table <- renderTable({
+    # use req to only render results when credentials()$user_auth is TRUE
+    #req(credenciales()$user_auth)
+    #user_data() %>%
+     # mutate(across(starts_with("login_time"), as.character))
+  #})
+  
+  user_rol <- reactive({
+    credenciales()$info
+  })
+  
+  output$ui <- renderUI({
+    req(credenciales()$user_auth)
+    if(credenciales()$info[["Rol"]] == "alumno"){
+      adminUI("alumno1")
+      
+    }
+  })
+  adminServer("alumno1")
+    
+  
+
+  #credenciales()$info[["Rol"]]
+
+
+
 }
+
+
+
+  
+
 
 shinyApp(ui = ui, server = server)
 
