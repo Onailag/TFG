@@ -6,7 +6,7 @@ bd <- dbConnect(MySQL(), user = "root", password = "root",
                 host = "localhost")
 
 # Creo la base de datos
-dbSendQuery(bd, "CREATE DATABASE appcuestionarios;")
+# dbSendQuery(bd, "CREATE DATABASE appcuestionarios;")
 
 # Uso la base de datos
 dbSendQuery(bd, "USE appcuestionarios")
@@ -41,11 +41,20 @@ dbSendQuery(bd, "CREATE TABLE Grupos (
 )")
 
 
-# Creo tabla Cuestionarios
-dbSendQuery(bd, "CREATE TABLE Cuestionarios (
-  ID_cuestionario VARCHAR(10) PRIMARY KEY,
+# Creo tabla Intento_Cuestionario
+dbSendQuery(bd, "CREATE TABLE Intento_Cuestionario (
+  ID_intento VARCHAR(10) PRIMARY KEY,
   Puntuacion DECIMAL(3,2) NOT NULL,
   Fecha DATE NOT NULL
+)")
+
+dbSendQuery(bd, "CREATE TABLE Preguntas(
+  Id_pregunta VARCHAR(10) PRIMARY KEY,
+  Enunciado   VARCHAR(500) NOT NULL,
+  Respuesta_1   VARCHAR(500) NOT NULL,
+  Respuesta_2   VARCHAR(500) NOT NULL,
+  Respuesta_3   VARCHAR(500),
+  Respuesta_4   VARCHAR(500)
 )")
 
 
@@ -67,29 +76,20 @@ dbSendQuery(bd, "ALTER TABLE Usuarios_Grupos
             ADD FOREIGN KEY (Grupos_ID) REFERENCES Grupos (Codigo_grupo)")
 
 dbSendQuery(bd, "ALTER TABLE Asignaturas
-            ADD FOREIGN KEY (Codigo_asignatura) REFERENCES Temas (Codigo_tema)")
-
+            ADD Codigo_tema VARCHAR(10) NOT NULL,
+            ADD FOREIGN KEY (Codigo_tema) REFERENCES Temas (Codigo_tema)")
 
 dbSendQuery(bd, "ALTER TABLE Asignaturas
-            ADD FOREIGN KEY (Codigo_asignatura) REFERENCES Grupos (Codigo_grupo)")
+            ADD Codigo_Grupo VARCHAR(10) NOT NULL,
+            ADD FOREIGN KEY (Codigo_Grupo) REFERENCES Grupos (Codigo_grupo)")
 
-dbSendQuery(bd, "ALTER TABLE Temas
-            ADD FOREIGN KEY (Codigo_tema) REFERENCES Cuestionarios (ID_cuestionario)")
 
 dbSendQuery(bd, "ALTER TABLE Usuarios
-            ADD FOREIGN KEY (ID_usuario) REFERENCES Cuestionarios (ID_cuestionario)")
+            ADD ID_intento VARCHAR(10) NOT NULL,
+            ADD FOREIGN KEY (ID_intento) REFERENCES Intento_Cuestionario (ID_intento)")
 
 #dbSendQuery(bd, "Drop database appcuestionarios")
 
-####
-# Errores al insertar 
-# Error in .local(conn, statement, ...) : 
-# could not run statement: Cannot add or update a child row: a foreign key constraint fails (`appcuestionarios`.`usuarios`, 
-# CONSTRAINT `usuarios_ibfk_1` FOREIGN KEY (`ID`) REFERENCES `cuestionarios` (`ID`))
-#
-#
-# Revisar relaciones.
-#
-###
+
 
 dbDisconnect(bd)
