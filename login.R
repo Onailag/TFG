@@ -1,24 +1,20 @@
 library(shiny)
 library(RMySQL)
 library(dplyr)
+library(bslib)
 
 source("moduloAdmin.R")
 source("moduloAlumno.R")
 source("moduloProfesor.R")
 source("moduloPassw.R")
+source("moduloFunciones.R")
 
-options(encoding = 'UTF-8')
+loginUI <- fluidPage(
 
-conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                  host = "localhost")
-dbSendQuery(conn, "USE tablas")
-user_bd <- dbGetQuery(conn, "SELECT * FROM Usuarios")
-dbDisconnect(conn)
-
-ui <- fluidPage(
-  
   # Boton logout
-  div(class = "pull-left", shinyauthr::logoutUI(id = "logout")),
+  div(class = "pull-right", shinyauthr::logoutUI(id = "logout", label = "Cerrar sesión",
+                                                 icon = icon("right-from-bracket")), 
+      style = "position: absolute; bottom: 0;right:0;"),
   
   # Modulo de inicio de sesion
   shinyauthr::loginUI(id = "login", title = "Cuestionarios", user_title = "Usuario", 
@@ -28,8 +24,10 @@ ui <- fluidPage(
   uiOutput("ui")
 )
 
-server <- function(input, output, session) {
-
+loginServer <- function(input, output, session) {
+  options(encoding = 'UTF-8')
+  user_bd <- getUsers()
+  
   credenciales <- shinyauthr::loginServer(
     id = "login",
     data = user_bd,
@@ -45,26 +43,31 @@ server <- function(input, output, session) {
   )
 
   
-  user_data <- reactive({
-    credenciales()$info
+  ## Si se produce un logout
+  observe({
+    req(logout_init())
+    session$reload()
   })
   
   output$ui <- renderUI({
     req(credenciales()$user_auth)
     if(credenciales()$info[["ChangePass"]] == 1){
-      passUI("prueba")
+      passUI("passUI")
+      
+     
     }else{
       if(credenciales()$info[["Rol"]] == "alumno"){
+        print(credenciales()$user_auth)
         alumnoUI("alumnoUI")
       }else if(credenciales()$info[["Rol"]] == "profesor"){
-        profesorUI("profesorUI")
+        nextUI <- "profesor"
       }else if(credenciales()$info[["Rol"]] == "administrador"){
         adminUI("adminUI")
       }
     }
     
   })
-  passServer("prueba")
+  passServer("passUI", credenciales()$info[["ID"]])
   alumnoServer("alumnoUI")
   profesorServer("profesorUI")
   adminServer("adminUI")
@@ -79,5 +82,5 @@ server <- function(input, output, session) {
   
 
 
-shinyApp(ui = ui, server = server)
+shinyApp(ui = loginUI, server = loginServer)
 

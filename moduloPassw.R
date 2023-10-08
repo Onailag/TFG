@@ -1,5 +1,6 @@
 library(shiny)
 
+
 passUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -29,7 +30,8 @@ passUI <- function(id) {
             tags$span(
               class = "help-block",
               icon("circle-info"),
-              "Requisitos de la contraseña. Aun por definir."
+              "La contraseña debe incluir una mayúscula, una minúscula, un número y tener entre
+              6 y 10 caracteres."
             ),
             tags$br(),
             tags$div(
@@ -41,20 +43,40 @@ passUI <- function(id) {
                 class = "btn_passnew"
               ),
               tags$br(), tags$br(),
-              textOutput("pass")
+              shinyjs::hidden(
+                tags$div(
+                  id = ns("error"),
+                  tags$p(
+                    "Contraseña no válida.",
+                    style = "color: red; font-weight: bold; padding-top: 5px;",
+                    class = "text-center"
+                  )
+                )
+              )
             )
           )
-      )
-    )
+        )
+      ),
     )
   )
 }
 
-passServer <- function(id) {
+passServer <- function(id, UserID) {
   moduleServer(
     id,
     function(input, output, session) {
-      output$pass <- renderText(input$pwd_one)
+      observeEvent(input$update_pwd,{
+        
+        if(!validPassword(input$pwd_one, input$pwd_two)){
+          # Based on ShinyAuthr login error msg  
+          shinyjs::toggle(id = "error", anim = TRUE, time = 1, animType = "fade")
+          shinyjs::delay(5000, shinyjs::toggle(id = "error", anim = TRUE, time = 1, animType = "fade"))
+        }else{
+          updatePassword(UserID, sodium::password_store(input$pwd_one))
+        }
+      })
+      
+      
     }
   )
 }
