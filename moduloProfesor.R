@@ -176,7 +176,6 @@ profesorServer <- function(id, user) {
       })
       
       output[[paste0("subject_name_panel_", isolate(currentTab()))]] <- renderText({
-        print(subjectData())
         paste("Nombre: ", 
         iconv(isolate(subjectData())$name, from = "UTF-8", to = "ISO-8859-1"))
         
@@ -370,7 +369,7 @@ profesorServer <- function(id, user) {
           title = paste("Configuración del cuestionario de ", isolate(currentTab())),
           h3("Selecciona el número de preguntas para los cuestionarios."),
           selectInput(ns(paste0("num_preguntas_cuestionario", isolate(currentTab()))), "Número de preguntas", 
-                      choices = c(1:40)),
+                      choices = c(10:40)),
           div(
             actionButton(ns(paste0("update_nquestions", isolate(currentTab()))), label = "Aplicar cambios",
                          style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
@@ -379,7 +378,6 @@ profesorServer <- function(id, user) {
           
         ))
         n_questions <- input[[paste0("num_preguntas_cuestionario", isolate(currentTab()))]]
-        print(n_questions)
         
       },
       ignoreInit = TRUE)
@@ -387,7 +385,6 @@ profesorServer <- function(id, user) {
       observe({
         req(input[[paste0("update_nquestions", isolate(currentTab()))]])
         n_questions <- input[[paste0("num_preguntas_cuestionario", isolate(currentTab()))]]
-        print(n_questions)
         if(!is.null(n_questions)){
           update_test_question_number(isolate(currentTab()), n_questions)
         }
@@ -398,19 +395,19 @@ profesorServer <- function(id, user) {
       observeEvent(input[[paste0(paste0("tabla_resultados", currentTab(), sep=""),"_rows_selected")]], {
         selected_row <- input[[paste0(paste0("tabla_resultados", currentTab(), sep=""),"_rows_selected")]]
         if (length(selected_row)>0) {
-          selected_user <- getEnroledStudentsTable(currentTab())[selected_row, ]
+          selected_user <- getEnroledStudentsTable(isolate(currentTab()))[selected_row, ]
           selected_user_id <- as.character(selected_user$user_id)
-          
           output[[paste0(paste0("tabla_intentos",currentTab()), selected_user_id)]] <- renderDataTable({
-            get_subject_attempts_table(selected_user_id,currentTab())
+            table <- get_subject_attempts_table(selected_user_id,currentTab())
+            table$content <- iconv(table$content, from ="UTF-8",to="ISO-8859-1")
+            table
           }, selection = 'none', rownames = FALSE)
-          
           showModal(modalDialog(
             title = paste("Datos del usuario", selected_user$nombre),
             p(paste("ID:", selected_user$user_id)),
-            p(paste("Temas Superados:", get_passed_contents(selected_user_id, isolate(currentTab())))),
+            p(paste("Temas Superados:", paste(unlist(get_passed_contents(selected_user_id, isolate(currentTab()))), collapse=", "))),
             p(paste("Nota media:", get_average_score(selected_user_id, isolate(currentTab())))),
-            dataTableOutput(ns(paste0(paste0("tabla_intentos",currentTab()), selected_user_id))),
+            dataTableOutput(ns(paste0(paste0("tabla_intentos",isolate(currentTab())), selected_user_id))),
             easyClose = TRUE,
             footer = NULL, 
             size = "l"

@@ -73,6 +73,7 @@ passServer <- function(id, UserID) {
           shinyjs::delay(5000, shinyjs::toggle(id = "error", anim = TRUE, time = 1, animType = "fade"))
         }else{
           updatePassword(UserID, sodium::password_store(input$pwd_one))
+          session$reload()
         }
       })
       

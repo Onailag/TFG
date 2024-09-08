@@ -15,7 +15,7 @@ adminUI <- function(id) {
                
               actionButton(
                  inputId = ns("add_user"),
-                 label = "Add a user",
+                 label = "Añadir usuario",
                  icon = icon("plus"),
                  width = "24%",
                  class = "btn-primary"
@@ -24,7 +24,7 @@ adminUI <- function(id) {
               
               actionButton(
                  inputId = ns("remove_user"),
-                 label = "Remove a user",
+                 label = "Eliminar usuario",
                  icon = icon("xmark"),
                  width = "24%",
                  class = "btn-primary", 
@@ -33,7 +33,7 @@ adminUI <- function(id) {
               
               actionButton(
                 inputId = ns("add_multiple_user_csv"),
-                label = "Add multiple users",
+                label = "Añadir múltiples usuarios",
                 icon = icon("file"),
                 width = "24%",
                 class = "btn-primary", 
@@ -42,7 +42,7 @@ adminUI <- function(id) {
               
               actionButton(
                 inputId = ns("remove_multiple_user_csv"),
-                label = "Remove multiple users",
+                label = "Eliminar múltiples usuarios",
                 icon = icon("file"),
                 width = "24%",
                 class = "btn-primary", 
@@ -57,7 +57,7 @@ adminUI <- function(id) {
               
               actionButton(
                 inputId = ns("reload_userTable"),
-                label = "Reload UserTable",
+                label = "Recargar tabla",
                 icon = icon("refresh"),
                 width = "100%",
                 class = "btn-primary", 
@@ -75,7 +75,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("add_subject"),
-                 label = "Add a subject",
+                 label = "Añadir asignatura",
                  icon = icon("plus"),
                  width = "24%",
                  class = "btn-primary"
@@ -84,7 +84,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("remove_subject"),
-                 label = "Remove a subject",
+                 label = "Eliminar asignatura",
                  icon = icon("xmark"),
                  width = "24%",
                  class = "btn-primary", 
@@ -93,7 +93,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("add_multiple_subject_csv"),
-                 label = "Add multiple subjects",
+                 label = "Añadir múltiples asignaturas",
                  icon = icon("file"),
                  width = "24%",
                  class = "btn-primary", 
@@ -102,7 +102,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("remove_multiple_subject_csv"),
-                 label = "Remove multiple subjects",
+                 label = "Eliminar múltiples asignaturas",
                  icon = icon("file"),
                  width = "24%",
                  class = "btn-primary", 
@@ -117,7 +117,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("reload_subjectTable"),
-                 label = "Reload SubjectTable",
+                 label = "Recargar tabla",
                  icon = icon("refresh"),
                  width = "100%",
                  class = "btn-primary", 
@@ -129,14 +129,14 @@ adminUI <- function(id) {
                
       ),
       
-      tabPanel("User Subjects",
+      tabPanel("Inscripciones",
                icon = icon("book"),
                h2(style="text-align: center;",
                  "Usuarios y asignaturas"),
                
                actionButton(
                  inputId = ns("add_userSubject"),
-                 label = "Add a subject",
+                 label = "Añadir inscripción",
                  icon = icon("plus"),
                  width = "24%",
                  class = "btn-primary"
@@ -145,7 +145,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("remove_userSubject"),
-                 label = "Remove a subject",
+                 label = "Eliminar inscripción",
                  icon = icon("xmark"),
                  width = "24%",
                  class = "btn-primary", 
@@ -154,7 +154,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("add_multiple_userSubject_csv"),
-                 label = "Add multiple subjects",
+                 label = "Añadir inscripciones",
                  icon = icon("file"),
                  width = "24%",
                  class = "btn-primary", 
@@ -163,7 +163,7 @@ adminUI <- function(id) {
                
                actionButton(
                  inputId = ns("remove_multiple_userSubject_csv"),
-                 label = "Remove multiple subjects",
+                 label = "Eliminar inscripciones",
                  icon = icon("file"),
                  width = "24%",
                  class = "btn-primary", 
@@ -199,7 +199,7 @@ adminServer <- function(id) {
     id,
     function(input, output, session) {
       #callModule(modalModule, session$ns)
-      
+      ns <- session$ns
       
       
       addUsersCsvModal <- function() {
@@ -246,14 +246,14 @@ adminServer <- function(id) {
                         choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
                                        "Admin" = "admin"), 
                         selected = "profesor"),
-            textInput(inputId = ns("userID"), label = "userID"),
+            textInput(inputId = ns("user_id"), label = "user_id"),
             textInput(inputId = ns("userPass"), label = "password", value = generatePassword()),
             textInput(inputId = ns("userName"), label = "name"),
             textInput(inputId = ns("userEmail"), label = "email"),
             checkboxInput(ns("userChangePass"), label = "Ask to change password at first login", value = TRUE),
             align = "center",
             
-            tags$style(type="text/css", "#userID{text-align:center};"),
+            tags$style(type="text/css", "#user_id{text-align:center};"),
             tags$style(type="text/css", "#userPass{text-align:center};"),
             tags$style(type="text/css", "#userName{text-align:center};"),
             tags$style(type="text/css", "#userEmail{text-align:center};"),
@@ -272,16 +272,6 @@ adminServer <- function(id) {
               
               align = "center"),
             
-            shinyjs::hidden(
-              tags$div(
-                id = ns("errorIDAdd"),
-                tags$p(
-                  "Ese ID ya está registrado.",
-                  style = "color: red; font-weight: bold; padding-top: 5px;",
-                  class = "text-center"
-                )
-              )
-            )
           ))
       }
       
@@ -291,15 +281,11 @@ adminServer <- function(id) {
       )
       
       observeEvent(input$modalAddUserButton,{
-        req(input$userID)
-        if(!existsUserID(input$userID)){
-          addUser(input$userID, input$userName, input$userRol, input$userEmail, 
-                  sodium::password_store(input$userPass), 0)
-          removeModal()
-        }else{
-          shinyjs::toggle(id = "errorIDAdd", anim = TRUE, time = 1, animType = "fade")
-          shinyjs::delay(5000, shinyjs::toggle(id = "error", anim = TRUE, time = 1, animType = "fade"))
-        }
+        req(input$user_id)
+        addUser(input$user_id, input$userName, input$userRol, input$userEmail, 
+                sodium::password_store(input$userPass), input$userChangePass)
+        removeModal()
+
         
       })
       
@@ -311,8 +297,8 @@ adminServer <- function(id) {
         modalDialog(
           shinyjs::useShinyjs(),
           div(
-            textInput(inputId = ns("userIDRemove"), label = "userID"),
-            tags$style(type="text/css", "#userID{text-align:center};"),
+            textInput(inputId = ns("user_idRemove"), label = "user_id"),
+            tags$style(type="text/css", "#user_id{text-align:center};"),
             align="center"
           ),
           footer = tagList(
@@ -348,16 +334,10 @@ adminServer <- function(id) {
                    showModal(removeUserModal()))
       
       observeEvent(input$modalRemoveUserButton,{
-        req(input$userIDRemove)
-        if(!existsUserID(input$userIDRemove)){
-          shinyjs::toggle(id = "errorIDRemove", anim = TRUE, time = 1, animType = "fade")
-          shinyjs::delay(5000, shinyjs::toggle(id = "errorIDRemove", anim = TRUE, time = 1, animType = "fade"))
-          
-        }else{
-          removeUser(input$userIDRemove)
+        req(input$user_idRemove)
+          removeUser(input$user_idRemove)
           removeModal()
           showNotification("Accion completada")
-        }
         
       })
       
@@ -396,41 +376,39 @@ adminServer <- function(id) {
       
       output$userTable <- DT::renderDataTable({
         input$reload_userTable
-        isolate(get_users())
+        users <- isolate(get_users())
+        users$name <- iconv(users$name,  from = "UTF-8", to = "ISO-8859-1")
+        users
       })
       
       
       
-      
+####################################################################################      
+########  SUBJECT   ################################################################    
+####################################################################################      
       
       output$subjectTable <- DT::renderDataTable({
-        conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                          host = "localhost")
-        dbSendQuery(conn, "USE tablas")
-        user_table <- dbGetQuery(conn, 
-                                  "SELECT ID, Nombre, Rol, Email FROM Usuarios")
-        dbDisconnect(conn)
-        user_table
+        input$reload_subjectTable
+        table <- get_subjects_table()
+        table$description <- iconv(table$description,  from = "UTF-8", to = "ISO-8859-1")
+        table$name <- iconv(table$name,  from = "UTF-8", to = "ISO-8859-1")
+        table
       })
       
       observeEvent(input$add_subject, {
+        ns <- session$ns
         showModal(modalDialog(
           div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
+            textInput(inputId = ns("subject_code"), label = "subject_code"),
+            textInput(inputId = ns("name"), label = "name"),
+            textInput(inputId = ns("description"), label = "description"),
+            textInput(inputId = ns("course"), label = "course"),
             align = "center",
             
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
+            tags$style(type="text/css", "#subject_code{text-align:center};"),
+            tags$style(type="text/css", "#name{text-align:center};"),
+            tags$style(type="text/css", "#description{text-align:center};"),
+            tags$style(type="text/css", "#course{text-align:center};"),
           ),
           
           footer = tagList(
@@ -439,130 +417,147 @@ adminServer <- function(id) {
             ),
             
           div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
+              actionButton(inputId = ns("modalAddSubjectButton"), label = "Añadir asignatura",
                            style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
               align = "center"))
           ))
       })
       
+      observeEvent(input$modalAddSubjectButton,{
+        req(input$subject_code)
+        addSubject(input$subject_code, input$name, input$description, 
+                input$course)
+        removeModal()
+        
+        
+      })
+      
+      removeSubjectModal <- function(){
+        ns <- session$ns
+        modalDialog(
+          shinyjs::useShinyjs(),
+          div(
+            textInput(inputId = ns("subject_codeRemove"), label = "subject_code"),
+            tags$style(type="text/css", "#subject_code{text-align:center};"),
+            align="center"
+          ),
+          footer = tagList(
+            div(
+              modalButton("Cancelar")  
+            ),
+            
+            
+            div(
+              actionButton(inputId = ns("modalRemoveSubjectButton"), label = "Eliminar asignatura",
+                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+              
+              
+              align = "center")
+          )
+        )
+      }
+      
       observeEvent(input$remove_subject, {
-        showModal(modalDialog(
-          div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
-            align = "center",
-            
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
-          ),
-          
-          footer = tagList(
-            div(
-              modalButton("Cancelar")  
-            ),
-            
-            div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
-                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-              align = "center"))
-        ))
+        showModal(removeSubjectModal())
       })
       
-      observeEvent(input$add_multiple_subject_csv, {
-        showModal(modalDialog(
-          div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
-            align = "center",
-            
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
-          ),
-          
-          footer = tagList(
-            div(
-              modalButton("Cancelar")  
-            ),
-            
-            div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
-                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-              align = "center"))
-        ))
+      observeEvent(input$modalRemoveSubjectButton,{
+        req(input$subject_codeRemove)
+          removeSubject(input$subject_codeRemove)
+          removeModal()
+          showNotification("Accion completada")
+        
+        
       })
       
-      observeEvent(input$remove_multiple_subject_csv, {
-        showModal(modalDialog(
-          div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
-            align = "center",
-            
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
-          ),
-          
-          footer = tagList(
-            div(
-              modalButton("Cancelar")  
-            ),
-            
-            div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
-                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-              align = "center"))
-        ))
+      addSubjectsCsvModal <- function() {
+        ns <- session$ns
+        modalDialog(
+          fileInput(ns("subjectsCSVAdd"), label = "Input csv"),
+          verbatimTextOutput(ns("previewSubjectAdd")),
+          actionButton(ns("addSubjects"), label = "Añadir asignaturas")
+        )
+      }
+      
+      ############### Observers usersCSVmodal
+      observeEvent(input$add_multiple_subject_csv,
+                   showModal(addSubjectsCsvModal())
+      )
+      
+      observeEvent(input$subjectsCSVAdd,{
+        csv <- readr::read_csv(input$subjectsCSVAdd$datapath)
+        output$previewSubjectAdd <- renderPrint({
+          head(csv)
+        })
       })
+      
+      
+      observeEvent(input$addSubjects, { 
+        req(input$subjectsCSVAdd)
+        csv <-  readr::read_csv(input$subjectsCSVAdd$datapath, show_col_types = FALSE)
+        addSubjectsByCSV(csv)
+        removeModal()
+        showNotification("Acción completada")
+      })
+      
+      
+      observeEvent(input$subjectsCSVRemove,{
+        csv <- readr::read_csv(input$usersCSVRemove$datapath)
+        output$previewSubjectRemove <- renderPrint({
+          head(csv)
+        })
+      })
+      
+      
+      observeEvent(input$removeSubjects, { 
+        req(input$subjectsCSVRemove)
+        csv <-  readr::read_csv(input$subjectsCSVRemove$datapath, show_col_types = FALSE)
+        removeSubjectsByCSV(csv)
+        removeModal()
+        showNotification("Acción completada")
+      })
+      
+      removeSubjectsCsvModal <- function() {
+        ns <- session$ns
+        modalDialog(
+          
+          fileInput(ns("subjectsCSVRemove"), label = "Cargar csv asignaturas"),
+          verbatimTextOutput(ns("previewSubjectRemove")),
+          actionButton(ns("removeSubjects"), label = "Eliminar asignaturas")
+        )
+      }
+      
+      ############### Observers removeUsersCSVmodal
+      observeEvent(input$remove_multiple_subject_csv,
+                   showModal(removeSubjectsCsvModal())
+      )
       
       
       
 ########################################################################################################     
-
+############# User subject   ###########################################################################     
+########################################################################################################        
+      
+      
+      
+      output$userSubjectTable <- DT::renderDataTable({
+        input$reload_userSubjectTable
+        table <- get_user_subjects_table()
+        table
+      })
+      
+      
       observeEvent(input$add_userSubject, {
+        ns <- session$ns
         showModal(modalDialog(
           div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
+
+            textInput(inputId = ns("user_id_usersubject"), label = "user_id"),
+            textInput(inputId = ns("subject_code_usersubject"), label = "subject_code"),
             align = "center",
             
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
+            tags$style(type="text/css", "#user_id{text-align:center};"),
+            tags$style(type="text/css", "#subject_code{text-align:center};"),
           ),
           
           footer = tagList(
@@ -571,107 +566,125 @@ adminServer <- function(id) {
             ),
             
             div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
+              actionButton(inputId = ns("modalAddUserSubjectButton"), label = "Añadir inscripción",
                            style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
               align = "center"))
         ))
       })
+      
+      observeEvent(input$modalAddUserSubjectButton,{
+        req(input$user_id_usersubject)
+        addUserSubject(input$user_id_usersubject, input$subject_code_usersubject)
+        removeModal()
+        
+        
+      })
+      
+      removeUserSubjectModal <- function(){
+        ns <- session$ns
+        modalDialog(
+          shinyjs::useShinyjs(),
+          div(
+            
+            textInput(inputId = ns("user_id_usersubjectRemove"), label = "user_id"),
+            textInput(inputId = ns("subject_code_user_subjectRemove"), label = "subject_code"),
+            tags$style(type="text/css", "#user_id_usersubjectRemove{text-align:center};"),
+            tags$style(type="text/css", "#subject_code_user_subjectRemove{text-align:center};"),
+            
+            align="center"
+          ),
+          footer = tagList(
+            div(
+              modalButton("Cancelar")  
+            ),
+            
+            
+            div(
+              actionButton(inputId = ns("modalRemoveUserSubjectButton"), label = "Eliminar inscripción",
+                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+              
+              
+              align = "center")
+          )
+        )
+      }
+      
       
       observeEvent(input$remove_userSubject, {
-        showModal(modalDialog(
-          div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
-            align = "center",
-            
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
-          ),
-          
-          footer = tagList(
-            div(
-              modalButton("Cancelar")  
-            ),
-            
-            div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
-                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-              align = "center"))
-        ))
+          showModal(removeUserSubjectModal())
       })
       
-      observeEvent(input$add_multiple_userSubject_csv, {
-        showModal(modalDialog(
-          div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
-            align = "center",
-            
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
-          ),
-          
-          footer = tagList(
-            div(
-              modalButton("Cancelar")  
-            ),
-            
-            div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
-                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-              align = "center"))
-        ))
+      
+      observeEvent(input$modalRemoveUserSubjectButton,{
+        req(input$user_id_usersubjectRemove)
+        req(input$subject_code_user_subjectRemove)
+        removeUserSubject(input$user_id_usersubjectRemove, input$subject_code_user_subjectRemove)
+        removeModal()
+        showNotification("Accion completada")
       })
       
-      observeEvent(input$remove_multiple_userSubject_csv, {
-        showModal(modalDialog(
-          div(
-            selectInput("userRol", label = "Select Rol", 
-                        choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
-                                       "Admin" = "admin"), 
-                        selected = "profesor"),
-            textInput(inputId = ("userID"), label = "userID"),
-            textInput(inputId = ("userPass"), label = "password", value = generatePassword()),
-            textInput(inputId = ("userName"), label = "name"),
-            textInput(inputId = ("userEmail"), label = "email"),
-            checkboxInput(("userChangePass"), label = "Ask to change password at first login", value = TRUE),
-            align = "center",
-            
-            tags$style(type="text/css", "#userID{text-align:center};"),
-            tags$style(type="text/css", "#userPass{text-align:center};"),
-            tags$style(type="text/css", "#userName{text-align:center};"),
-            tags$style(type="text/css", "#userEmail{text-align:center};"),
-          ),
-          
-          footer = tagList(
-            div(
-              modalButton("Cancelar")  
-            ),
-            
-            div(
-              actionButton(inputId = ("modalAddUserButton"), label = "Add User",
-                           style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-              align = "center"))
-        ))
+      
+      addUserSubjectsCsvModal <- function() {
+        ns <- session$ns
+        modalDialog(
+          fileInput(ns("user_subjectsCSVAdd"), label = "Input csv"),
+          verbatimTextOutput(ns("previewUserSubjectAdd")),
+          actionButton(ns("addUserSubjects"), label = "Añadir asignaturas")
+        )
+      }
+      
+      ############### Observers usersCSVmodal
+      observeEvent(input$add_multiple_userSubject_csv,
+                   showModal(addUserSubjectsCsvModal())
+      )
+      
+      observeEvent(input$user_subjectsCSVAdd,{
+        csv <- readr::read_csv(input$user_subjectsCSVAdd$datapath)
+        output$previewUserSubjectAdd <- renderPrint({
+          head(csv)
+        })
       })
+      
+      
+      observeEvent(input$addUserSubjects, { 
+        req(input$user_subjectsCSVAdd)
+        csv <-  readr::read_csv(input$user_subjectsCSVAdd$datapath, show_col_types = FALSE)
+        addUserSubjectsByCSV(csv)
+        removeModal()
+        showNotification("Acción completada")
+      })
+      
+      
+      observeEvent(input$user_subjectsCSVRemove,{
+        csv <- readr::read_csv(input$user_subjectsCSVRemove$datapath)
+        output$previewUserSubjectRemove <- renderPrint({
+          head(csv)
+        })
+      })
+      
+      
+      observeEvent(input$removeUserSubjects, { 
+        req(input$user_subjectsCSVRemove)
+        csv <-  readr::read_csv(input$user_subjectsCSVRemove$datapath, show_col_types = FALSE)
+        removeUserSubjectsByCSV(csv)
+        removeModal()
+        showNotification("Acción completada")
+      })
+      
+      removeUserSubjectsCsvModal <- function() {
+        ns <- session$ns
+        modalDialog(
+          
+          fileInput(ns("user_subjectsCSVRemove"), label = "Cargar csv inscripciones"),
+          verbatimTextOutput(ns("previewUserSubjectRemove")),
+          actionButton(ns("removeUserSubjects"), label = "Eliminar inscripciones")
+        )
+      }
+      
+      ############### Observers removeUsersCSVmodal
+      observeEvent(input$remove_multiple_userSubject_csv,
+                   showModal(removeUserSubjectsCsvModal())
+      )
       
       
     }

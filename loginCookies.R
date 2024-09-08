@@ -12,7 +12,7 @@ source("moduloProfesor.R")
 
 source("moduloPassw.R")
 source("moduloFunciones.R")
-source("moduloModalsAdmin.R")
+#source("moduloModalsAdmin.R")
 
 loginUI <- function(id){
   ns <- NS(id)

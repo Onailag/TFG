@@ -7,7 +7,7 @@ update_node_path <- function(subject, user, node){
     conn <- dbConnect(MySQL(), user = "root", password = "root", 
                       dbname = "appcuestionarios", host = "localhost", 
                       encoding = "latin1")
-    sql <- "INSERT IGNORE INTO visited_nodes (subjectID, userID, nodeID) VALUES(?,?,?);"
+    sql <- "INSERT IGNORE INTO visited_nodes (subject_code, user_id, nodeID) VALUES(?,?,?);"
     querySql <- sqlInterpolate(conn, sql, subject, user, node)
     dbSendQuery(conn, querySql)
     dbDisconnect(conn)
@@ -47,15 +47,22 @@ get_passed_contents <- function(user, subject){
   return(iconv(contents$content, from = "UTF-8", to = "latin1"))
 }
 
-get_best_grade_content <- function(user, subject, threshold = 5){
+get_best_grade_content <- function(user, subject, t1 = 5, t2= 100){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     dbname = "appcuestionarios", host = "localhost")
   
-  sql <- "SELECT content, max(score) AS  score FROM test_attempts WHERE
-          user = ? AND subject = ? AND score >= ?
-          GROUP By content ORDER BY score ASC;"
+  sql <- "WITH MaxScores AS (
+    SELECT content, MAX(score) AS score
+    FROM test_attempts
+    WHERE user = ? AND subject = ? 
+    GROUP BY content
+)
+
+SELECT content, score
+FROM MaxScores WHERE score >= ? and score < ?
+ORDER BY score ASC;"
   
-  querySql <- sqlInterpolate(conn, sql, user, subject, threshold)
+  querySql <- sqlInterpolate(conn, sql, user, subject, t1,t2)
   contents <- dbGetQuery(conn, querySql)
   dbDisconnect(conn)
   
@@ -109,7 +116,7 @@ update_current_node <- function(user, subject){
   if(update_node){
     conn <- dbConnect(MySQL(), user = "root", password = "root", 
                       dbname = "appcuestionarios", host = "localhost")
-    sql <- "UPDATE user_subjects SET current_node = ? WHERE userID = ? and subjectID = ?;"
+    sql <- "UPDATE user_subjects SET current_node = ? WHERE user_id = ? and subject_code = ?;"
 
     querySql <- sqlInterpolate(conn, sql,  children[i], user, subject)
     dbSendQuery(conn, querySql)
@@ -125,7 +132,7 @@ get_current_node <- function(user, subject){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     dbname = "appcuestionarios", host = "localhost")
   sql <- "SELECT current_node FROM user_subjects WHERE
-          subjectID = ? AND userID = ? ;"
+          subject_code = ? AND user_id = ? ;"
   
   querySql <- sqlInterpolate(conn, sql,  subject, user)
   print(querySql)
@@ -139,8 +146,8 @@ get_children <- function(node, subject){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     dbname = "appcuestionarios", host = "localhost")
   sql <- "SELECT c.childID
-        FROM children c JOIN attributes a ON c.subjectID = a.subjectID AND c.childID = a.nodeID
-        WHERE c.subjectID = ? AND c.nodeID = ?
+        FROM children c JOIN attributes a ON c.subject_code = a.subject_code AND c.childID = a.nodeID
+        WHERE c.subject_code = ? AND c.nodeID = ?
         GROUP BY c.childID
         ORDER BY COUNT(a.attribute) ASC ;"
   
@@ -154,7 +161,7 @@ get_node_attb <- function(node, subject){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     dbname = "appcuestionarios", host = "localhost")
   sql <- "SELECT attribute FROM attributes WHERE
-          subjectID = ? AND nodeID = ? ;"
+          subject_code = ? AND nodeID = ? ;"
   
   querySql <- sqlInterpolate(conn, sql,  subject, node)
   attributes <- dbGetQuery(conn, querySql)
@@ -184,26 +191,29 @@ mytabAlumno <- function(tabName, id, user){
         verbatimTextOutput(ns(paste0("subject_average_panel_", tabName))),
         hidden(
           div(id = ns(paste0("panel3",tabName)),         h3("Contenidos superados"),
-              h2(HTML('<img src="three_stars.png" alt="estrella" style="height:20px;"> 3 Estrellas'))),
+              h2(HTML('<img src="three_stars.png" alt="estrella" style="height:20px;"> 3 Estrellas')),
+              uiOutput(ns(paste0("3stars", tabName))),
+              lapply(get_best_grade_content(user$user_id,tabName,9), function(content){
+                actionButton(ns(paste0(paste0(content, "_btn3"),tabName)), label = content)
+              })),
           div(id = ns(paste0("panel2",tabName)),         h3("Contenidos a mejorar"),
-            h2(HTML('<img src="two_stars.png" alt="estrella" style="height:20px;"> 2 Estrellas'))),
-          div(id = ns(paste0("panel1",tabName)), h2(HTML('<img src="one_star.png" alt="estrella" style="height:20px;"> 1 Estrella')))
+            h2(HTML('<img src="two_stars.png" alt="estrella" style="height:20px;"> 2 Estrellas')),
+            uiOutput(ns(paste0("2stars", tabName))),
+            lapply(get_best_grade_content(user$user_id,tabName,7,9), function(content){
+              actionButton(ns(paste0(paste0(content, "_btn2"),tabName)), label = content)
+            }),),
+          div(id = ns(paste0("panel1",tabName)), h2(HTML('<img src="one_star.png" alt="estrella" style="height:20px;"> 1 Estrella')),
+              uiOutput(ns(paste0("1star", tabName))),
+              lapply(get_best_grade_content(user$user_id,tabName, 5,7), function(content){
+                actionButton(ns(paste0(paste0(content, "_btn1"),tabName)), label = content)
+              }),)
 
         ),
         
         
-        uiOutput(ns(paste0("3stars", tabName))),
-        lapply(get_best_grade_content(user$user_id,tabName,9), function(content){
-          actionButton(ns(paste0(paste0(content, "_btn3"),tabName)), label = content)
-        }),
-        uiOutput(ns(paste0("2stars", tabName))),
-        lapply(get_best_grade_content(user$user_id,tabName,7), function(content){
-          actionButton(ns(paste0(paste0(content, "_btn2"),tabName)), label = content)
-        }),
-        uiOutput(ns(paste0("1star", tabName))),
-        lapply(get_best_grade_content(user$user_id,tabName, 5), function(content){
-          actionButton(ns(paste0(paste0(content, "_btn1"),tabName)), label = content)
-        }),
+
+
+
         h2("Contenidos por superar"),
         lapply(get_contents_to_test(user$user_id,tabName), function(content){
           actionButton(ns(paste0(paste0(content, "_btn"),tabName)), label = content)
@@ -348,13 +358,12 @@ alumnoServer <- function(id, user) {
             })
             isolate({
               test_id <- generateAttempt(user$user_id, isolate(currentTab()), content)
-              update_current_node(user$user_id, isolate(currentTab()))
               test_questions <- get_questions(test_id, isolate(currentTab()), content)
               test_answers <- get_answers(test_id)
+              test_questions <- test_questions[order(test_questions$id), ]
             })
+            update_current_node(user$user_id, isolate(currentTab()))
             
-            
-            print(iconv(test_questions$text, "UTF-8", "latin1"))
             attempt_id(test_id)
             preguntas(test_questions)
             respuestas(test_answers)
@@ -376,7 +385,7 @@ alumnoServer <- function(id, user) {
                 withMathJax(),
                 HTML(paste0("<div style='font-size: 18px;'>", question, "</div>")),
                 br(),
-                #h3(preguntas$id[pregunta_actual()])
+                #h3(preguntas()$id[pregunta_actual()])
               )
             })
             
@@ -482,13 +491,27 @@ alumnoServer <- function(id, user) {
               final_answers <- unlist(final_answers, recursive = TRUE)
               insert_attempt_answers(attempt_id(), final_answers)
               calculate_results(attempt_id())
-              
+              score <- get_results(attempt_id())
+              print(score)
+              if((score >= 5) & (!is.na(score)) ){
+                update_current_node(user$user_id, isolate(currentTab()))
+              }
               showModal(modalDialog(
                 title = "Cuestionario finalizado",
-                paste("Tu puntuación es: ", get_results(attempt_id())),
-                easyClose = TRUE,
-                footer = modalButton("Close")
+                paste("Tu puntuación es: ", score),
+                easyClose = FALSE,
+                footer = NULL,
+                div(
+                  actionButton(inputId = ns("close_results"), label = "Salir",
+                               style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+                  
+                  
+                  align = "center"),
               ))
+              
+              observeEvent(input$close_results, {
+                session$reload() 
+              })
               #session$reload() cuando se pulse el boton de cerrar el dialog de puntuacion, reload
             },  ignoreNULL = TRUE, ignoreInit = TRUE)
             

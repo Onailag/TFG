@@ -4,7 +4,7 @@ library(xml2)
 library(XML)
 library(dplyr)
 library(jsonlite)
-library(uuid)
+library(sodium)
 
 ################################################################################
 ################################################################################
@@ -109,20 +109,6 @@ get_sessionids_from_db <- function() {
 ################################################################################
 
 
-existsUserID <- function(userID){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                     dbname = "appcuestionarios", host = "localhost")
-  
-  sql <- "SELECT * FROM Users where user_id = ?id;"
-  
-  querySql <- sqlInterpolate(conn, sql, id = userID)
-  
-  users <- dbGetQuery(conn, querySql)
-  
-  dbDisconnect(conn)
-  
-  return(nrow(users) >= 1)
-}
 
 validPassword <- function(pass1, pass2){
   return((pass1==pass2)&& stringr::str_detect(pass1, 
@@ -135,62 +121,172 @@ generatePassword <- function(){
   return(pass)
 }
 
-# password is passed already hashed
-# AÃ±adir trycatch y comprobar que el userID esta disponible y que role es valido
-addUser <- function(userID, name = NA, role, email= NA, password, changePass = 1){
 
-  
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
+addUser <- function(user_id, name = NA, role, email= NA, password, changePass = 1){
 
-  
-  if((is.na(name)||name=="")&(is.na(email)||email=="")){
-    sql <- "INSERT INTO Users (user_id, role, password, change_pass)
-          values
-          (?Id, ?Role, ?Pass, ?ChangePass);"
-    querySql <- sqlInterpolate(conn, sql, Id = userID, Role = role,
-                              Pass = password, ChangePass = changePass)
-  }else if (is.na(name)||name==""){
-    sql <- "INSERT INTO Users (user_id, role, mail, password, change_pass)
-          values
-          (?Id, ?Role, ?Email, ?Pass, ?ChangePass);"
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
     
-    querySql <- sqlInterpolate(conn, sql, Id = userID, Role = role,
-                               Email = email, Pass = password, ChangePass = changePass)
-  }else if(is.na(email)||email==""){
-    sql <- "INSERT INTO Users (user_id, name, role, password, change_pass)
-          values
-          (?Id, ?Name, ?Role, ?Pass, ?ChangePass);"
     
-    querySql <- sqlInterpolate(conn, sql, Id = userID, Name = name, Role = role,
-                               Pass = password, ChangePass = changePass)
-  }else{
-    sql <- "INSERT INTO users (user_id, name, role, mail, password, change_pass)
+    if((is.na(name)||name=="")&(is.na(email)||email=="")){
+      sql <- "INSERT INTO Users (user_id, role, password, change_pass)
           values
-          (?Id, ?Name, ?Role, ?Email, ?Pass, ?ChangePass);"
+          (?Id, ?Role, ?Pass, ?ChangePass)
+    ON DUPLICATE KEY UPDATE
+    role = values(role),
+    password = values(password),
+    change_pass = values(change_pass);"
+      querySql <- sqlInterpolate(conn, sql, Id = user_id, Role = role,
+                                 Pass = password, ChangePass = changePass)
+    }else if (is.na(name)||name==""){
+      sql <- "INSERT INTO Users (user_id, role, mail, password, change_pass)
+          values
+          (?Id, ?Role, ?Email, ?Pass, ?ChangePass)ON DUPLICATE KEY UPDATE
+    role = values(role),
+    mail = values(mail),
+    password = values(password),
+    change_pass = values(change_pass);"
+      
+      querySql <- sqlInterpolate(conn, sql, Id = user_id, Role = role,
+                                 Email = email, Pass = password, ChangePass = changePass)
+    }else if(is.na(email)||email==""){
+      sql <- "INSERT INTO Users (user_id, name, role, password, change_pass)
+          values
+          (?Id, ?Name, ?Role, ?Pass, ?ChangePass)
+        ON DUPLICATE KEY UPDATE
+    name = values(name),
+    role = values(role),
+    password = values(password),
+    change_pass = values(change_pass);"
+      
+      querySql <- sqlInterpolate(conn, sql, Id = user_id, Name = name, Role = role,
+                                 Pass = password, ChangePass = changePass)
+    }else{
+      sql <- "INSERT INTO users (user_id, name, role, mail, password, change_pass)
+          values
+          (?Id, ?Name, ?Role, ?Email, ?Pass, ?ChangePass)
+        ON DUPLICATE KEY UPDATE
+    name = values(name),
+    role = values(role),
+    mail = values(mail),
+    password = values(password),
+    change_pass = values(change_pass);"
+      
+      querySql <- sqlInterpolate(conn, sql, Id = user_id, Name = name, Role = role,
+                                 Email = email, Pass = password, ChangePass = changePass)
+    }
     
-    querySql <- sqlInterpolate(conn, sql, Id = userID, Name = name, Role = role,
-                               Email = email, Pass = password, ChangePass = changePass)
-  }
+    
+    dbSendQuery(conn, querySql)
+    
+    dbDisconnect(conn)
+  })
   
-  
-  dbSendQuery(conn, querySql)
-  
-  dbDisconnect(conn)
 }
 
-removeUser <- function(userID){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
+removeUser <- function(user_id){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+    
+    sql <- "DELETE FROM Users WHERE user_id = ?Id;"
+    
+    querySql <- sqlInterpolate(conn, sql, Id = user_id)
+    
+    dbSendQuery(conn, querySql)
+    
+    dbDisconnect(conn)
+  })
 
+}
+
+addSubject <- function(subject_code, name, description, course){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+      sql <- "INSERT INTO Subjects (subject_code, name, description, course, questions_per_test)
+          values
+          (?subject_code, ?name, ?description, ?course,10)
+    ON DUPLICATE KEY UPDATE
+    name = values(name),
+    description = values(description),
+    course = values(course);"
+      querySql <- sqlInterpolate(conn, sql,subject_code = subject_code, name = name, description = description,
+                                 course = course)
+
+    
+    dbSendQuery(conn, querySql)
+    
+    dbDisconnect(conn)
+  })
+}
+
+removeSubject <- function(subject_code){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+    
+    sql <- "DELETE FROM Subjects WHERE subject_code = ?;"
+    
+    querySql <- sqlInterpolate(conn, sql, subject_code)
+    
+    dbSendQuery(conn, querySql)
+    
+    dbDisconnect(conn)
+  })
   
-  sql <- "DELETE FROM Users WHERE user_id = ?Id;"
-  
-  querySql <- sqlInterpolate(conn, sql, Id = userID)
-  
-  dbSendQuery(conn, querySql)
-  
-  dbDisconnect(conn)
+}
+
+get_user_subjects_table <- function(){
+  table <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+    
+    sql <- "SELECT * FROM user_subjects;"
+    
+    table <- dbGetQuery(conn, sql)
+    
+    dbDisconnect(conn)
+    return(table)
+  })
+  return(table)
+}
+
+addUserSubject <- function(user_id, subject_code){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+    sql <- "INSERT INTO user_subjects (user_id, subject_code, current_node)
+          values
+          (?, ? ,1);"
+    querySql <- sqlInterpolate(conn, sql, user_id, subject_code)
+    
+    
+    dbSendQuery(conn, querySql)
+    
+    dbDisconnect(conn)
+  })
+}
+
+removeUserSubject <- function(user_id, subject_code){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+    sql <- "DELETE FROM user_subjects WHERE user_id = ? AND subject_code = ?;"
+    querySql <- sqlInterpolate(conn, sql, user_id, subject_code)
+    
+    
+    dbSendQuery(conn, querySql)
+    
+    dbDisconnect(conn)
+  })
 }
 
 resetDBpruebas <- function(){
@@ -233,6 +329,31 @@ resetDBpruebas <- function(){
   ################################################################################
 }
 
+addSubjectsByCSV <- function(inputCSV){
+  df <- data.frame(inputCSV)
+  for(i in 1:nrow(df)){
+    subject_code <- df[i, ][[1]]
+    name <- df[i, ][[2]]
+    description <- df[i, ][[3]]
+    course <- df[i, ][[4]]
+
+    addSubject(subject_code, name, description, course)
+  }
+}
+
+addUserSubjectsByCSV <- function(inputCSV){
+  df <- data.frame(inputCSV)
+  for(i in 1:nrow(df)){
+    user_id <- df[i, ][[1]]
+    subject_code <- df[i, ][[2]]
+
+    
+    addUserSubject(user_id, subject_code)
+  }
+}
+
+
+
 addUsersByCSV <- function(inputCSV){
   df <- data.frame(inputCSV)
   for(i in 1:nrow(df)){
@@ -242,7 +363,6 @@ addUsersByCSV <- function(inputCSV){
     email <- df[i, ][[4]]
     password <- sodium::password_store(df[i,][[5]]) 
     changePass <- df[i, ][[6]]
-    if(!existsUserID(id))
     addUser(id, name, role, email, password, changePass)
   }
   
@@ -252,11 +372,40 @@ removeUsersByCSV <- function(inputCSV){
   df <- data.frame(inputCSV)
   for(i in 1:nrow(df)){
     id <- df[i, ][[1]]
-    if(existsUserID(id))
       removeUser(id)
   }
-  
 }
+
+removeSubjectsByCSV <- function(inputCSV){
+  df <- data.frame(inputCSV)
+  for(i in 1:nrow(df)){
+    id <- df[i, ][[1]]
+    removeSubject(id)
+  }
+}
+
+removeUsersSubjectsByCSV <- function(inputCSV){
+  df <- data.frame(inputCSV)
+  for(i in 1:nrow(df)){
+    user_id <- df[i, ][[1]]
+    subject_code <- df[i, ][[2]]
+    removeUserSubject(user_id,subject_code)
+  }
+}
+
+get_subjects_table <- function(){
+  table <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    sql <- "SELECT * FROM subjects;"
+    table <- dbGetQuery(conn, sql)
+    dbDisconnect(conn)
+    return(table)
+  })
+  return(table)
+}
+
+
 
 ################################################################################
 ################################################################################
@@ -279,24 +428,24 @@ generate_id <- function() {
 
 
 
-get_subjects <- function(userID){
+get_subjects <- function(user_id){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     host = "localhost", db="APPCUESTIONARIOS")
-  sql <- "SELECT subjectID FROM user_subjects WHERE userID = ?;"
+  sql <- "SELECT subject_code FROM user_subjects WHERE user_id = ?;"
   
-  querySql <- sqlInterpolate(conn, sql, userID)
+  querySql <- sqlInterpolate(conn, sql, user_id)
   
   subjects <- dbGetQuery(conn, querySql)
   dbDisconnect(conn)
   print(subjects)
-  return(subjects$subjectID)
+  return(subjects$subject_code)
 }
 
-get_attb <- function(subjectID){
+get_attb <- function(subject_code){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     host = "localhost", db="APPCUESTIONARIOS")
-  sql <- "SELECT DISTINCT(attribute) FROM attributes WHERE subjectID = ?;"
-  querySql <- sqlInterpolate(conn, sql, subjectID)
+  sql <- "SELECT DISTINCT(attribute) FROM attributes WHERE subject_code = ?;"
+  querySql <- sqlInterpolate(conn, sql, subject_code)
   
   attb <- dbGetQuery(conn, querySql)
   dbDisconnect(conn)
@@ -316,8 +465,8 @@ getEnroledStudentsTable <- function(subject){
       MAX(ta.date) AS last_test_date,
       COUNT(ta.id) AS total_tests
       FROM appcuestionarios.users u
-      JOIN appcuestionarios.user_subjects us ON u.user_id = us.userID
-      JOIN appcuestionarios.subjects s ON us.subjectID = s.subject_code
+      JOIN appcuestionarios.user_subjects us ON u.user_id = us.user_id
+      JOIN appcuestionarios.subjects s ON us.subject_code = s.subject_code
       LEFT JOIN appcuestionarios.test_attempts ta ON u.user_id = ta.user AND ta.subject = s.subject_code
       WHERE u.role = 'alumno'AND s.subject_code = ?
       GROUP BY u.user_id, u.name
@@ -362,15 +511,13 @@ get_subject_questions_table <- function(subject){
 }
 
 get_question_answers_table <- function(subject, question){
-  print("entra")
   result <- tryCatch({
     conn <- dbConnect(MySQL(), user = "root", password = "root", 
                       host = "localhost", db="APPCUESTIONARIOS")
-    querySql <- "SELECT * FROM answers WHERE subject_code = ? AND question_id = ?;"
+    querySql <- "SELECT id, question_id, text, fraction, subject_code FROM answers WHERE subject_code = ? AND question_id = ?;"
     querySql <- sqlInterpolate(conn, querySql, subject, question)
     
     answers <- dbGetQuery(conn, querySql)
-    answers$content <- iconv(answers$content, from = "UTF-8", to = "latin1")
     answers$text <- iconv(answers$text, from = "UTF-8", to = "latin1")
     
     
@@ -656,7 +803,6 @@ add_questions <- function(file, subject, content){
   answer_queries <- apply(answer_df, 1, function(row) {
     build_insert_query(row, "Answers")
   })
-  print(answer_queries[1])
   lapply(answer_queries, dbSendQuery, conn = bd)
   
   dbDisconnect(bd)
@@ -688,24 +834,24 @@ delete_questions_and_answers <- function(question, subject, content){
 
 
 
-parseLattice <- function(json_data, subjectID){
+parseLattice <- function(json_data, subject_code){
   conn <- dbConnect(MySQL(), user = "root", password = "root", 
                     dbname = "appcuestionarios", host = "localhost")
   for (i in 1:nrow(json_data)) {
     nodeID <- json_data$id[[i]]
-    insertNode(nodeID, subjectID, conn)
+    insertNode(nodeID, subject_code, conn)
     children <- json_data$children[[i]]  # Acceder a la lista de children para la fila actual
     attributes <- json_data$attributes[[i]]  # Acceder a la lista de children para la fila actual
     print(children)
     if (length(children) > 0){
       lapply(children, function(childID) {
-        insertChildren(nodeID, subjectID, childID,conn)
+        insertChildren(nodeID, subject_code, childID,conn)
       })
     }
     if (length(attributes) > 0){
       lapply(attributes, function(attb) {
         if(attb != ""){
-          insertAttb(nodeID, subjectID, attb,conn)
+          insertAttb(nodeID, subject_code, attb,conn)
         }
       })
     }
@@ -715,30 +861,30 @@ parseLattice <- function(json_data, subjectID){
 
 
 
-insertChildren <- function(nodeID,subjectID, childID, conn){
-  sql <- "INSERT IGNORE INTO children (subjectID,nodeID, childID)
+insertChildren <- function(nodeID,subject_code, childID, conn){
+  sql <- "INSERT IGNORE INTO children (subject_code,nodeID, childID)
           values
-          ( ?subjectID,?nodeID, ?childID);"
+          ( ?subject_code,?nodeID, ?childID);"
   
-  querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subjectID = subjectID, childID = childID)
+  querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subject_code = subject_code, childID = childID)
   dbSendQuery(conn,querySql)
 }
 
-insertNode <- function(nodeID,subjectID, conn){
-  sql <- "INSERT IGNORE INTO nodes (subjectID,nodeID)
+insertNode <- function(nodeID,subject_code, conn){
+  sql <- "INSERT IGNORE INTO nodes (subject_code,nodeID)
           values
-          ( ?subjectID,?nodeID);"
+          ( ?subject_code,?nodeID);"
   
-  querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subjectID = subjectID)
+  querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subject_code = subject_code)
   dbSendQuery(conn,querySql)
 }
 
-insertAttb <- function(nodeID,subjectID, attribute, conn){
-  sql <- "INSERT IGNORE INTO attributes (subjectID,nodeID,attribute)
+insertAttb <- function(nodeID,subject_code, attribute, conn){
+  sql <- "INSERT IGNORE INTO attributes (subject_code,nodeID,attribute)
           values
-          ( ?subjectID,?nodeID,?attribute);"
+          ( ?subject_code,?nodeID,?attribute);"
   
-  querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subjectID = subjectID, attribute=attribute)
+  querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subject_code = subject_code, attribute=attribute)
   dbSendQuery(conn,querySql)
 }
 ################################################################################
@@ -819,7 +965,7 @@ generateAttempt <- function(user, subject, content){
     #escribo el intento relacionandolo con el usuario y la asignatura. aqui ira la nota
     sql <- "INSERT INTO test_attempts (id, user, subject,score, content, date)
           values
-          (?id, ?user, ?subject,5, ?content, ?date);"
+          (?id, ?user, ?subject,8, ?content, ?date);"
     content <- iconv(content, from = "latin1", to = "UTF-8")
     querySql <- sqlInterpolate(conn, sql, id = random_id, user = user, subject = subject,
                                content = content, date = as.character(now()))
@@ -890,7 +1036,6 @@ get_answers <- function(attempt_id){
       question_answers <- dbGetQuery(conn, querySql)
       #### IMPORTANTE CHEQUEAR ICONV PARA RESOLVER EL ENCODING
       question_answers$text <- iconv(question_answers$text, from = "UTF-8", to = "latin1")
-      # Ordenar las respuestas si la columna shuffle estÃ¡ en TRUE
       
       sql <- "SELECT shuffle FROM questions WHERE id = ?question_id"
       querySql <- sqlInterpolate(conn, sql, question_id = question)
@@ -918,7 +1063,7 @@ calculate_results <- function(attempt_id){
         FROM attempt_answers aa JOIN answers a ON aa.answer_id = a.id
         WHERE aa.attempt_id = ?;"
     
-    sql <- "SELECT GREATEST(sc.score, 0) / COALESCE((tdg.total_default_grade/10), 1) AS score, sc.correct_answers,
+    sql <- "SELECT GREATEST(COALESCE(sc.score, 0), 0) / COALESCE((tdg.total_default_grade/10), 1) AS score, sc.correct_answers,
     sc.incorrect_answers, tdg.total_default_grade FROM (
       SELECT 
           SUM(a.score_fraction) - SUM(a.penalty_fraction) AS score,
