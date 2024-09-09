@@ -132,7 +132,7 @@ adminUI <- function(id) {
       tabPanel("Inscripciones",
                icon = icon("book"),
                h2(style="text-align: center;",
-                 "Usuarios y asignaturas"),
+                 "Inscripciones"),
                
                actionButton(
                  inputId = ns("add_userSubject"),
@@ -205,9 +205,10 @@ adminServer <- function(id) {
       addUsersCsvModal <- function() {
         ns <- session$ns
         modalDialog(
-          fileInput(ns("usersCSVAdd"), label = "Input csv"),
+          fileInput(ns("usersCSVAdd"), label = "Cargar archivo csv"),
           verbatimTextOutput(ns("previewAdd")),
-          actionButton(ns("addUsers"), label = "Add users by CSV")
+          actionButton(ns("addUsers"), label = "Añadir usuarios",
+                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
         )
       }
       
@@ -239,10 +240,10 @@ adminServer <- function(id) {
         ns <- session$ns
         modalDialog(
           shinyjs::useShinyjs(),
-          title = "Add a user",
+          title = "Añadir usuario",
           
           div(
-            selectInput(ns("userRol"), label = "Select Rol", 
+            selectInput(ns("userRol"), label = "Selecciona el rol del usuario.", 
                         choices = list("Alumno" = "alumno", "Profesor" = "profesor", 
                                        "Admin" = "admin"), 
                         selected = "profesor"),
@@ -250,7 +251,7 @@ adminServer <- function(id) {
             textInput(inputId = ns("userPass"), label = "password", value = generatePassword()),
             textInput(inputId = ns("userName"), label = "name"),
             textInput(inputId = ns("userEmail"), label = "email"),
-            checkboxInput(ns("userChangePass"), label = "Ask to change password at first login", value = TRUE),
+            checkboxInput(ns("userChangePass"), label = "Solicitar cambio de contraseña en el primer inicio de sesión", value = TRUE),
             align = "center",
             
             tags$style(type="text/css", "#user_id{text-align:center};"),
@@ -261,12 +262,12 @@ adminServer <- function(id) {
           
           footer = tagList(
             div(
-              modalButton("Cancelar")  
+              modalButton("Dismiss")  
             ),
             
             
             div(
-              actionButton(inputId = ns("modalAddUserButton"), label = "Add User",
+              actionButton(inputId = ns("modalAddUserButton"), label = "Añadir usuario",
                            style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
               
               
@@ -285,7 +286,7 @@ adminServer <- function(id) {
         addUser(input$user_id, input$userName, input$userRol, input$userEmail, 
                 sodium::password_store(input$userPass), input$userChangePass)
         removeModal()
-
+        showNotification("Accion completada")
         
       })
       
@@ -303,12 +304,12 @@ adminServer <- function(id) {
           ),
           footer = tagList(
             div(
-              modalButton("Cancelar")  
+              modalButton("Dismiss")  
             ),
             
             
           div(
-            actionButton(inputId = ns("modalRemoveUserButton"), label = "Remove User",
+            actionButton(inputId = ns("modalRemoveUserButton"), label = "Eliminar usuario",
                            style="color: #fff; background-color: #337ab7; border-color: #2e6da4"),
               
               
@@ -347,9 +348,10 @@ adminServer <- function(id) {
         ns <- session$ns
         modalDialog(
           
-          fileInput(ns("usersCSVRemove"), label = "Input csv"),
+          fileInput(ns("usersCSVRemove"), label = "Cargar archivo csv"),
           verbatimTextOutput(ns("previewRemove")),
-          actionButton(ns("removeUsers"), label = "Remove users by CSV")
+          actionButton(ns("removeUsers"), label = "Eliminar usuarios",
+                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
         )
       }
       
@@ -413,7 +415,7 @@ adminServer <- function(id) {
           
           footer = tagList(
             div(
-              modalButton("Cancelar")  
+              modalButton("Dismiss")  
             ),
             
           div(
@@ -428,7 +430,7 @@ adminServer <- function(id) {
         addSubject(input$subject_code, input$name, input$description, 
                 input$course)
         removeModal()
-        
+        showNotification("Accion completada")
         
       })
       
@@ -443,7 +445,7 @@ adminServer <- function(id) {
           ),
           footer = tagList(
             div(
-              modalButton("Cancelar")  
+              modalButton("Dismiss")  
             ),
             
             
@@ -473,9 +475,10 @@ adminServer <- function(id) {
       addSubjectsCsvModal <- function() {
         ns <- session$ns
         modalDialog(
-          fileInput(ns("subjectsCSVAdd"), label = "Input csv"),
+          fileInput(ns("subjectsCSVAdd"), label = "Cargar archivo csv"),
           verbatimTextOutput(ns("previewSubjectAdd")),
-          actionButton(ns("addSubjects"), label = "Añadir asignaturas")
+          actionButton(ns("addSubjects"), label = "Añadir asignaturas",
+                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
         )
       }
       
@@ -521,9 +524,10 @@ adminServer <- function(id) {
         ns <- session$ns
         modalDialog(
           
-          fileInput(ns("subjectsCSVRemove"), label = "Cargar csv asignaturas"),
+          fileInput(ns("subjectsCSVRemove"), label = "Cargar archivo csv"),
           verbatimTextOutput(ns("previewSubjectRemove")),
-          actionButton(ns("removeSubjects"), label = "Eliminar asignaturas")
+          actionButton(ns("removeSubjects"), label = "Eliminar asignaturas",
+                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
         )
       }
       
@@ -562,7 +566,7 @@ adminServer <- function(id) {
           
           footer = tagList(
             div(
-              modalButton("Cancelar")  
+              modalButton("Dismiss")  
             ),
             
             div(
@@ -576,7 +580,7 @@ adminServer <- function(id) {
         req(input$user_id_usersubject)
         addUserSubject(input$user_id_usersubject, input$subject_code_usersubject)
         removeModal()
-        
+        showNotification("Accion completada")
         
       })
       
@@ -595,7 +599,7 @@ adminServer <- function(id) {
           ),
           footer = tagList(
             div(
-              modalButton("Cancelar")  
+              modalButton("Dismiss")  
             ),
             
             
@@ -627,9 +631,10 @@ adminServer <- function(id) {
       addUserSubjectsCsvModal <- function() {
         ns <- session$ns
         modalDialog(
-          fileInput(ns("user_subjectsCSVAdd"), label = "Input csv"),
+          fileInput(ns("user_subjectsCSVAdd"), label = "Cargar archivo csv"),
           verbatimTextOutput(ns("previewUserSubjectAdd")),
-          actionButton(ns("addUserSubjects"), label = "Añadir asignaturas")
+          actionButton(ns("addUserSubjects"), label = "Añadir inscripciones",
+                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
         )
       }
       
@@ -675,9 +680,10 @@ adminServer <- function(id) {
         ns <- session$ns
         modalDialog(
           
-          fileInput(ns("user_subjectsCSVRemove"), label = "Cargar csv inscripciones"),
+          fileInput(ns("user_subjectsCSVRemove"), label = "Cargar archivo csv"),
           verbatimTextOutput(ns("previewUserSubjectRemove")),
-          actionButton(ns("removeUserSubjects"), label = "Eliminar inscripciones")
+          actionButton(ns("removeUserSubjects"), label = "Eliminar inscripciones",
+                       style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
         )
       }
       

@@ -2,176 +2,6 @@ library(shiny)
 library(bslib)
 options(encoding = 'UTF-8')
 
-update_node_path <- function(subject, user, node){
-  tryCatch({
-    conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                      dbname = "appcuestionarios", host = "localhost", 
-                      encoding = "latin1")
-    sql <- "INSERT IGNORE INTO visited_nodes (subject_code, user_id, nodeID) VALUES(?,?,?);"
-    querySql <- sqlInterpolate(conn, sql, subject, user, node)
-    dbSendQuery(conn, querySql)
-    dbDisconnect(conn)
-  })
-  
-}
-
-get_passed_contents_table <- function(user, subject){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost", 
-                    encoding = "latin1")
-  sql <- "SELECT content, MAX(score) AS score, COUNT(*) AS attempt_count
-  FROM test_attempts 
-  WHERE user = ? AND subject = ? AND score > 0
-  GROUP BY content 
-  ORDER BY score DESC;"
-  querySql <- sqlInterpolate(conn, sql, user, subject)
-  contents <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  #content
-  return(iconv(contents, from = "UTF-8", to = "latin1"))
-}
-
-get_passed_contents <- function(user, subject){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost", 
-                    encoding = "latin1")
-  
-  sql <- "SELECT content, min(date) AS date FROM test_attempts WHERE
-          user = ? AND subject = ? AND score >= 5
-          GROUP By content ORDER BY date ASC;"
-  
-  querySql <- sqlInterpolate(conn, sql, user, subject)
-  contents <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  
-  return(iconv(contents$content, from = "UTF-8", to = "latin1"))
-}
-
-get_best_grade_content <- function(user, subject, t1 = 5, t2= 100){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
-  
-  sql <- "WITH MaxScores AS (
-    SELECT content, MAX(score) AS score
-    FROM test_attempts
-    WHERE user = ? AND subject = ? 
-    GROUP BY content
-)
-
-SELECT content, score
-FROM MaxScores WHERE score >= ? and score < ?
-ORDER BY score ASC;"
-  
-  querySql <- sqlInterpolate(conn, sql, user, subject, t1,t2)
-  contents <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  
-  return(iconv(contents$content, from = "UTF-8", to = "latin1"))
-}
-
-get_contents_to_improve <- function(user, subject, threshold){
-  contents <- get_best_grade_content(user, subject, threshold)
-  return(contents)
-}
-
-get_contents_to_test <- function(user, subject){
-  current_node <- get_current_node(user, subject)
-  print(current_node)
-  children <- get_children(current_node, subject)
-  
-  contents <- unique(unlist(lapply(children, get_node_attb, subject = subject)))
-  passed_contents <- get_passed_contents(user, subject)
-  
-  result <- if (length(passed_contents) > 0) {
-    setdiff(contents, passed_contents)
-  } else {
-    contents
-  }
-  return(result)
-  
-}
-
-
-
-update_current_node <- function(user, subject){
-  current_node <- get_current_node(user, subject)
-  update_node_path(subject,user,current_node)
-  passed_contents <- get_passed_contents(user, subject)
-  children <- get_children(current_node, subject)
-  update_node <- FALSE
-  i <- 1
-  while (!update_node & i <= length(children)) {
-    print("passed contents")
-    print(passed_contents)
-    print("Children_content")
-    print(get_node_attb(children[i], subject))
-    if(all(get_node_attb(children[i], subject)  %in% passed_contents )){
-      print("Node update")
-      update_node = TRUE
-    }else{
-      i <- i+1
-    }
-  }
-  
-  if(update_node){
-    conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                      dbname = "appcuestionarios", host = "localhost")
-    sql <- "UPDATE user_subjects SET current_node = ? WHERE user_id = ? and subject_code = ?;"
-
-    querySql <- sqlInterpolate(conn, sql,  children[i], user, subject)
-    dbSendQuery(conn, querySql)
-    update_node_path(subject,user,children[i])
-    dbDisconnect(conn)
-    
-    ## insert into visited_nodes 
-  }
-  
-}
-
-get_current_node <- function(user, subject){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
-  sql <- "SELECT current_node FROM user_subjects WHERE
-          subject_code = ? AND user_id = ? ;"
-  
-  querySql <- sqlInterpolate(conn, sql,  subject, user)
-  print(querySql)
-  current_node <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  return(current_node$current_node)
-}
-
-get_children <- function(node, subject){
-  ## Ordenados por el numero de atributos
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
-  sql <- "SELECT c.childID
-        FROM children c JOIN attributes a ON c.subject_code = a.subject_code AND c.childID = a.nodeID
-        WHERE c.subject_code = ? AND c.nodeID = ?
-        GROUP BY c.childID
-        ORDER BY COUNT(a.attribute) ASC ;"
-  
-  querySql <- sqlInterpolate(conn, sql,  subject, node)
-  children <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  return(children$childID)
-}
-
-get_node_attb <- function(node, subject){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
-  sql <- "SELECT attribute FROM attributes WHERE
-          subject_code = ? AND nodeID = ? ;"
-  
-  querySql <- sqlInterpolate(conn, sql,  subject, node)
-  attributes <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  
-  return(iconv(attributes$attribute, from = "UTF-8", to = "latin1"))
-}
-
-
-######
 
 mytabAlumno <- function(tabName, id, user){
   ns <- NS(id)
@@ -357,13 +187,12 @@ alumnoServer <- function(id, user) {
               hideTab(inputId = "alumnoTabSet", target = tab)
             })
             isolate({
-              test_id <- generateAttempt(user$user_id, isolate(currentTab()), content)
+              test_id <- generate_attempt(user$user_id, isolate(currentTab()), content)
               test_questions <- get_questions(test_id, isolate(currentTab()), content)
               test_answers <- get_answers(test_id)
               test_questions <- test_questions[order(test_questions$id), ]
             })
             update_current_node(user$user_id, isolate(currentTab()))
-            
             attempt_id(test_id)
             preguntas(test_questions)
             respuestas(test_answers)
@@ -467,7 +296,6 @@ alumnoServer <- function(id, user) {
                 runjs(sprintf('document.getElementById("%s%d").style.backgroundColor = "#A9CDF0";',
                               ns("btn_pregunta_"), isolate(pregunta_actual())))
               }else if(length(selected_items == 0)){
-                print("no seleccionada resp")
                 runjs(sprintf('document.getElementById("%s%d").style.backgroundColor = "#FFFFFF";',
                               ns("btn_pregunta_"), isolate(pregunta_actual())))
               }
@@ -494,7 +322,7 @@ alumnoServer <- function(id, user) {
               score <- get_results(attempt_id())
               print(score)
               if((score >= 5) & (!is.na(score)) ){
-                update_current_node(user$user_id, isolate(currentTab()))
+                update_current_node(user$user_id, preguntas()$subject[1])
               }
               showModal(modalDialog(
                 title = "Cuestionario finalizado",

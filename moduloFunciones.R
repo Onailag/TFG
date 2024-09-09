@@ -429,28 +429,34 @@ generate_id <- function() {
 
 
 get_subjects <- function(user_id){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    host = "localhost", db="APPCUESTIONARIOS")
-  sql <- "SELECT subject_code FROM user_subjects WHERE user_id = ?;"
-  
-  querySql <- sqlInterpolate(conn, sql, user_id)
-  
-  subjects <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  print(subjects)
-  return(subjects$subject_code)
+  result <-tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      host = "localhost", db="APPCUESTIONARIOS")
+    sql <- "SELECT subject_code FROM user_subjects WHERE user_id = ?;"
+    
+    querySql <- sqlInterpolate(conn, sql, user_id)
+    
+    subjects <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    
+    return(subjects$subject_code)
+  })
+  return(result)
 }
 
 get_attb <- function(subject_code){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    host = "localhost", db="APPCUESTIONARIOS")
-  sql <- "SELECT DISTINCT(attribute) FROM attributes WHERE subject_code = ?;"
-  querySql <- sqlInterpolate(conn, sql, subject_code)
-  
-  attb <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  
-  return(iconv(attb$attribute, from = "UTF-8", to = "latin1"))
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      host = "localhost", db="APPCUESTIONARIOS")
+    sql <- "SELECT DISTINCT(attribute) FROM attributes WHERE subject_code = ?;"
+    querySql <- sqlInterpolate(conn, sql, subject_code)
+    
+    attb <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    
+    return(iconv(attb$attribute, from = "UTF-8", to = "latin1"))
+  })
+  return(result)
 }
 
 getEnroledStudentsTable <- function(subject){
@@ -545,129 +551,17 @@ update_test_question_number <- function(subject, nquestions){
     dbDisconnect(conn)
 
   }, error = function(e) {
-    message("OcurriÃ³ un error: ", e$message)
+    message("Ocurrió un error: ", e$message)
   })
 }
 
-add_questions <- function(file, subject, content){
-  extract_question_id <- function(comment_text) {
-    trimws(gsub(".*: (\\d+)", "\\1", comment_text))
-  }
-  
-  extract_answer_info <- function(question_node){
-    answers <- xml_find_all(question_node, ".//answer")
-    question_type <- xml_attr(question_node, "type")
-    question_comment <- xml_text(xml_find_first(question_node, ".//preceding-sibling::comment()[1]"))
-    question_comment <- extract_question_id(question_comment)
-    
-    answer_info <- function(answer_node, question_id, i){
-      answer_fraction <- as.numeric(xml_attr(answer_node, "fraction"))
-      answer_format <- xml_attr(answer_node, "format")
-      answer_text <- xml_text(answer_node)
-      answer_text <- stringr::str_replace_all(answer_text, pattern = stringr::fixed("\\"),
-                                              replacement = "\\\\")
-      # Concatenar question_id con el nÃºmero de respuesta (i)
-      id <- paste0(trimws(question_id), "_", i)    
-      answer_df <- data.frame(
-        id = id,
-        question_id = question_id,
-        text = answer_text,
-        fraction = answer_fraction,
-        stringsAsFactors = FALSE
-      )
-      return(answer_df)
-    }
-    
-    if(question_type=="category"){
-      answers_df <- data.frame()
-    }else{
-      # Utilizamos mapply con la secuencia numÃ©rica para el nÃºmero de respuesta
-      answers_df <- mapply(answer_info, answers, question_comment, 1:length(answers), SIMPLIFY = FALSE)
-      # Luego combinamos las listas de dataframes en uno solo
-      answers_df <- do.call(rbind, answers_df)
-    }
-    return(answers_df)
-  }
-  
-  extract_question_info <- function(question_node){
-    question_type <- xml_attr(question_node, "type")
-    question_name <- xml_text(xml_find_first(question_node, ".//name/text"))
-    question_comment <- xml_text(xml_find_first(question_node, ".//preceding-sibling::comment()[1]"))
-    question_comment <- extract_question_id(question_comment)
-    question_default_grade <-  xml_text(xml_find_first(question_node, ".//defaultgrade"))
-    question_penalty <- xml_text(xml_find_first(question_node, ".//penalty"))
-    question_single <- xml_text(xml_find_first(question_node, ".//single"))
-    question_shuffle <- xml_text(xml_find_first(question_node, ".//shuffleanswers"))
-    
-    if(question_type=="category"){
-      question_text <- NA
-    }else{
-      question_text <- xml_text(xml_find_first(question_node, ".//questiontext/text"))
-      question_text <- stringr::str_replace_all(question_text, pattern = stringr::fixed("\\"),
-                                                replacement = "\\\\")
-      
-    }
-    
-    question_df <- data.frame(
-      id = question_comment,
-      type = question_type,
-      name = question_name,
-      text = question_text,
-      default_grade = question_default_grade,
-      penalty = question_penalty,
-      single = question_single,
-      shuffle = question_shuffle,
-      stringsAsFactors = FALSE
-    )
-    
-    return(question_df)
-  }
-  
-  bd <- dbConnect(MySQL(), user = "root", password = "root", 
-                  dbname = "appcuestionarios",
-                  host = "localhost")
-  #quiz_xml <- read_xml("Calculo_Limites.xml")
-  quiz_xml <- read_xml(file)
-  questions <- xml_find_all(quiz_xml, "//question") 
-  question_df <- do.call(rbind,Map(extract_question_info, questions))
-  answer_df <- do.call(rbind, lapply(questions, extract_answer_info))
-  answer_df$subject_code <- subject
-  answer_df$content <- content
-  answer_df
-  question_df$subject_code <- subject
-  question_df$content <- content
-  
-  question_df
-  
-  
-  build_insert_query <- function(row, tabla) {
-    #row <- ifelse(is.na(row), "NULL", sprintf("'%s'", row))
-    values <- paste0("'", row, "'", collapse = ", ")
-    query <- paste("INSERT IGNORE INTO ", tabla, " VALUES (", values, ")", sep = "")
-    return(query)
-  }
-  question_df <- subset(question_df, type != "category")
-  question_df
-  rownames(question_df) <- NULL 
-  question_df$single <- ifelse(tolower(question_df$single) == "true", 1, 0)
-  question_df$shuffle <- ifelse(tolower(question_df$shuffle) == "true", 1, 0)
-  question_queries <- apply(question_df, 1, function(row) {
-    build_insert_query(row, "Questions")
-  })
-  print(question_queries[1])
-  lapply(question_queries, dbSendQuery, conn = bd)
-  
-  answer_queries <- apply(answer_df, 1, function(row) {
-    build_insert_query(row, "Answers")
-  })
-  answer_queries
-  lapply(answer_queries, dbSendQuery, conn = bd)
-  
-  dbDisconnect(bd)
-  
-}
+
 
 add_questions <- function(file, subject, content){
+  
+  tryCatch({
+    
+
   extract_question_id <- function(comment_text) {
     trimws(gsub(".*: (\\d+)", "\\1", comment_text))
   }
@@ -702,9 +596,7 @@ add_questions <- function(file, subject, content){
           }
         }
 
-      print("Defaultgrade")
-      print(question_default_grade)
-      print(answer_score_fraction)
+
 
       # Concatenar question_id con el nÃºmero de respuesta (i)
       id <- paste0(trimws(question_id), "_", i)    
@@ -765,7 +657,7 @@ add_questions <- function(file, subject, content){
     return(question_df)
   }
   
-  bd <- dbConnect(MySQL(), user = "root", password = "root", 
+  conn <- dbConnect(MySQL(), user = "root", password = "root", 
                   dbname = "appcuestionarios",
                   host = "localhost")
   #quiz_xml <- read_xml("Calculo_Limites.xml")
@@ -797,16 +689,16 @@ add_questions <- function(file, subject, content){
     build_insert_query(row, "Questions")
   })
   print(question_queries[1])
-  lapply(question_queries, dbSendQuery, conn = bd)
+  lapply(question_queries, dbSendQuery, conn = conn)
   answer_df <- answer_df[,answer_col_ordered]
   #answer_df$content <- iconv(answer_df$content, from = "UTF-8", to = "latin1")
   answer_queries <- apply(answer_df, 1, function(row) {
     build_insert_query(row, "Answers")
   })
-  lapply(answer_queries, dbSendQuery, conn = bd)
+  lapply(answer_queries, dbSendQuery, conn = conn)
   
-  dbDisconnect(bd)
-  
+  dbDisconnect(conn)
+  })
 }
 
 delete_questions_and_answers <- function(question, subject, content){
@@ -835,28 +727,31 @@ delete_questions_and_answers <- function(question, subject, content){
 
 
 parseLattice <- function(json_data, subject_code){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
-  for (i in 1:nrow(json_data)) {
-    nodeID <- json_data$id[[i]]
-    insertNode(nodeID, subject_code, conn)
-    children <- json_data$children[[i]]  # Acceder a la lista de children para la fila actual
-    attributes <- json_data$attributes[[i]]  # Acceder a la lista de children para la fila actual
-    print(children)
-    if (length(children) > 0){
-      lapply(children, function(childID) {
-        insertChildren(nodeID, subject_code, childID,conn)
-      })
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    for (i in 1:nrow(json_data)) {
+      nodeID <- json_data$id[[i]]
+      insertNode(nodeID, subject_code, conn)
+      children <- json_data$children[[i]]  # Acceder a la lista de children para la fila actual
+      attributes <- json_data$attributes[[i]]  # Acceder a la lista de children para la fila actual
+      if (length(children) > 0){
+        lapply(children, function(childID) {
+          insertChildren(nodeID, subject_code, childID,conn)
+        })
+      }
+      if (length(attributes) > 0){
+        lapply(attributes, function(attb) {
+          if(attb != ""){
+            insertAttb(nodeID, subject_code, attb,conn)
+          }
+        })
+      }
     }
-    if (length(attributes) > 0){
-      lapply(attributes, function(attb) {
-        if(attb != ""){
-          insertAttb(nodeID, subject_code, attb,conn)
-        }
-      })
-    }
-  }
-  dbDisconnect(conn)
+    print("Reticulo procesado")
+    dbDisconnect(conn)
+  })
+
 }
 
 
@@ -887,17 +782,18 @@ insertAttb <- function(nodeID,subject_code, attribute, conn){
   querySql <- sqlInterpolate(conn, sql, nodeID = nodeID, subject_code = subject_code, attribute=attribute)
   dbSendQuery(conn,querySql)
 }
-################################################################################
-# Alumnos
+
 
 get_subject_attempts_table <- function(user, subject){
-  
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost")
-  sql <- "SELECT * FROM test_attempts WHERE user = ? AND subject = ?"
-  querySql <- sqlInterpolate(conn, sql, user, subject)
-  result <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    sql <- "SELECT * FROM test_attempts WHERE user = ? AND subject = ?"
+    querySql <- sqlInterpolate(conn, sql, user, subject)
+    result <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    return(result)
+  })
   return(result)
 }
 
@@ -920,9 +816,64 @@ get_average_score <- function(user, subject){
     print( e$message)
     return(NULL)
   })
-  print(result)
   return(result)
 }
+
+get_barplot_subject <- function(subject, content){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost", 
+                      encoding = "ISO-8859-1")
+    query <- " SELECT 
+        SUM(CASE WHEN score < 5 THEN 1 ELSE 0 END) AS suspensos,
+        SUM(CASE WHEN score BETWEEN 5 AND 9 THEN 1 ELSE 0 END) AS aprobados,
+        SUM(CASE WHEN score > 9 THEN 1 ELSE 0 END) AS sobresalientes
+    FROM test_attempts WHERE subject = ? AND content = ?;"
+    querySql <- sqlInterpolate(conn, query, subject, content)
+    print(querySql)
+    result <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    
+    result[is.na(result)] <- 0
+    result <- unlist(result[1,])
+    return(result)
+  })
+  return(result)
+}
+
+update_test_number_question <- function(subject, nquestions){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost", 
+                      encoding = "ISO-8859-1")
+    query <- "UPDATE subjects SET questions_per_text = ? WHERE (subject_code = ?);"
+    querySql <- sqlInterpolate(conn, query, nquestions, subject)
+    dbSendQuery(conn, querySql)
+    dbDisconnect(conn)
+  })
+  
+}
+
+get_subject_data <- function(subject){
+  
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost", 
+                      encoding = "ISO-8859-1")
+    query <- "SELECT * FROM subjects WHERE subject_code = ? "
+    querySql <- sqlInterpolate(conn, query, subject)
+    print(querySql)
+    res <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    return(res)
+  }, error = function(e) {
+    message("OcurriÃ³ un error: ", e$message)
+    return(NULL)
+  })
+  
+  return(result)
+}
+
 
 ################################################################################
 ################################################################################
@@ -932,17 +883,197 @@ get_average_score <- function(user, subject){
 
 get_test_attempt_table <- function(user, subject){
   tryCatch({
-    conn <- create_conn()
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
     sql <- "SELECT content, score, correct, incorrect, date FROM test_attempts
         WHERE user = ? and subject = ?;"
     querysql <- sqlInterpolate(conn, sql, user, subject)
     result <- dbGetQuery(conn, querysql)
     result$content = iconv(result$content, from = "UTF-8" , to = "ISO-8859-1")
-    close_conn(conn)
+    dbDisconnect(conn)
     return(result)
   })
 
 }
+
+update_node_path <- function(subject, user, node){
+  tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost", 
+                      encoding = "latin1")
+    sql <- "INSERT IGNORE INTO visited_nodes (subject_code, user_id, nodeID) VALUES(?,?,?);"
+    querySql <- sqlInterpolate(conn, sql, subject, user, node)
+    dbSendQuery(conn, querySql)
+    dbDisconnect(conn)
+  })
+  
+}
+
+get_passed_contents_table <- function(user, subject){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost", 
+                      encoding = "latin1")
+    sql <- "SELECT content, MAX(score) AS score, COUNT(*) AS attempt_count
+  FROM test_attempts 
+  WHERE user = ? AND subject = ? AND score > 0
+  GROUP BY content 
+  ORDER BY score DESC;"
+    querySql <- sqlInterpolate(conn, sql, user, subject)
+    contents <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    #content
+    return(iconv(contents, from = "UTF-8", to = "latin1"))
+  })
+  return(result)
+}
+
+get_passed_contents <- function(user, subject){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost", 
+                      encoding = "latin1")
+    
+    sql <- "SELECT content, min(date) AS date FROM test_attempts WHERE
+          user = ? AND subject = ? AND score >= 5
+          GROUP By content ORDER BY date ASC;"
+    
+    querySql <- sqlInterpolate(conn, sql, user, subject)
+    contents <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    
+    return(iconv(contents$content, from = "UTF-8", to = "latin1"))
+  })
+  return(result)
+}
+
+get_best_grade_content <- function(user, subject, t1 = 5, t2= 100){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    
+    sql <- "WITH MaxScores AS (
+    SELECT content, MAX(score) AS score
+    FROM test_attempts
+    WHERE user = ? AND subject = ? 
+    GROUP BY content
+  )
+  
+  SELECT content, score
+  FROM MaxScores WHERE score >= ? and score < ?
+  ORDER BY score ASC;"
+    
+    querySql <- sqlInterpolate(conn, sql, user, subject, t1,t2)
+    contents <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    
+    return(iconv(contents$content, from = "UTF-8", to = "latin1"))
+  })
+  return(result)
+}
+
+get_contents_to_improve <- function(user, subject, threshold){
+  contents <- get_best_grade_content(user, subject, threshold)
+  return(contents)
+}
+
+get_contents_to_test <- function(user, subject){
+  current_node <- get_current_node(user, subject)
+  children <- get_children(current_node, subject)
+  
+  contents <- unique(unlist(lapply(children, get_node_attb, subject = subject)))
+  passed_contents <- get_passed_contents(user, subject)
+  
+  result <- if (length(passed_contents) > 0) {
+    setdiff(contents, passed_contents)
+  } else {
+    contents
+  }
+  return(result)
+  
+}
+
+
+
+update_current_node <- function(user, subject){
+  current_node <- get_current_node(user, subject)
+  update_node_path(subject,user,current_node)
+  passed_contents <- get_passed_contents(user, subject)
+  children <- get_children(current_node, subject)
+  update_node <- FALSE
+  i <- 1
+  while (!update_node & i <= length(children)) {
+    if(all(get_node_attb(children[i], subject)  %in% passed_contents )){
+      print("Node update")
+      update_node = TRUE
+    }else{
+      i <- i+1
+    }
+  }
+  
+  if(update_node){
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    sql <- "UPDATE user_subjects SET current_node = ? WHERE user_id = ? and subject_code = ?;"
+    
+    querySql <- sqlInterpolate(conn, sql,  children[i], user, subject)
+    dbSendQuery(conn, querySql)
+    update_node_path(subject,user,children[i])
+    dbDisconnect(conn)
+  }
+  
+}
+
+get_current_node <- function(user, subject){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    sql <- "SELECT current_node FROM user_subjects WHERE
+          subject_code = ? AND user_id = ? ;"
+    
+    querySql <- sqlInterpolate(conn, sql,  subject, user)
+    print(querySql)
+    current_node <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    return(current_node$current_node)
+  })
+  return(result)
+}
+
+get_children <- function(node, subject){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    sql <- "SELECT c.childID
+        FROM children c JOIN attributes a ON c.subject_code = a.subject_code AND c.childID = a.nodeID
+        WHERE c.subject_code = ? AND c.nodeID = ?
+        GROUP BY c.childID
+        ORDER BY COUNT(a.attribute) ASC ;"
+    
+    querySql <- sqlInterpolate(conn, sql,  subject, node)
+    children <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    return(children$childID)
+  })
+  return(result)
+}
+
+get_node_attb <- function(node, subject){
+  result <- tryCatch({
+    conn <- dbConnect(MySQL(), user = "root", password = "root", 
+                      dbname = "appcuestionarios", host = "localhost")
+    sql <- "SELECT attribute FROM attributes WHERE
+          subject_code = ? AND nodeID = ? ;"
+    
+    querySql <- sqlInterpolate(conn, sql,  subject, node)
+    attributes <- dbGetQuery(conn, querySql)
+    dbDisconnect(conn)
+    
+    return(iconv(attributes$attribute, from = "UTF-8", to = "latin1"))
+  })
+  return(result)
+}
+
 
 
 
@@ -951,7 +1082,7 @@ get_test_attempt_table <- function(user, subject){
 # Funciones vista Cuestionario
 ################################################################################
 ################################################################################
-generateAttempt <- function(user, subject, content){
+generate_attempt <- function(user, subject, content){
   result <- tryCatch({
     conn <- dbConnect(MySQL(), user = "root", password = "root", 
                       dbname = "appcuestionarios", host = "localhost", encoding='latin1')

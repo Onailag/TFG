@@ -5,54 +5,6 @@ library(DT)
 library(shinybusy)
 options(encoding = 'UTF-8')
 
-get_barplot_subject <- function(subject, content){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost", 
-                    encoding = "ISO-8859-1")
-  query <- " SELECT 
-        SUM(CASE WHEN score < 5 THEN 1 ELSE 0 END) AS suspensos,
-        SUM(CASE WHEN score BETWEEN 5 AND 9 THEN 1 ELSE 0 END) AS aprobados,
-        SUM(CASE WHEN score > 9 THEN 1 ELSE 0 END) AS sobresalientes
-    FROM test_attempts WHERE subject = ? AND content = ?;"
-  querySql <- sqlInterpolate(conn, query, subject, content)
-  print(querySql)
-  result <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  
-  result[is.na(result)] <- 0
-  result <- unlist(result[1,])
-  return(result)
-}
-
-update_test_number_question <- function(subject, nquestions){
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                    dbname = "appcuestionarios", host = "localhost", 
-                    encoding = "ISO-8859-1")
-  query <- "UPDATE subjects SET questions_per_text = ? WHERE (subject_code = ?);"
-  querySql <- sqlInterpolate(conn, query, nquestions, subject)
-  dbSendQuery(conn, querySql)
-  dbDisconnect(conn)
-}
-
-get_subject_data <- function(subject){
-
-  result <- tryCatch({
-  conn <- dbConnect(MySQL(), user = "root", password = "root", 
-                      dbname = "appcuestionarios", host = "localhost", 
-                      encoding = "ISO-8859-1")
-  query <- "SELECT * FROM subjects WHERE subject_code = ? "
-  querySql <- sqlInterpolate(conn, query, subject)
-  print(querySql)
-  res <- dbGetQuery(conn, querySql)
-  dbDisconnect(conn)
-  return(res)
-  }, error = function(e) {
-    message("OcurriÃ³ un error: ", e$message)
-    return(NULL)
-  })
-
-  return(result)
-}
 
 
 mytab <- function(tabName, id){
@@ -206,23 +158,7 @@ profesorServer <- function(id, user) {
                   col = "blue", main = paste("Resultados de", input[[paste0("tema_seleccionado", isolate(currentTab()), sep="")]]))
         })
       })
-      
-
-      
-      # Datos simulados para la tabla
-      usuarios <- data.frame(
-        nombre = c("Juan", "Maria", "Luis"),
-        id = c(1, 2, 3),
-        temas_superados = I(list(
-          c("Unidad 1", "Unidad 2"),
-          c("Unidad 1"),
-          c("Unidad 2", "Unidad 3")
-        )),
-        stringsAsFactors = FALSE
-      )
-      
-      # Convertir listas en cadenas de texto para renderDataTable
-      usuarios$temas_superados <- sapply(usuarios$temas_superados, paste, collapse = ", ")
+    
       
       output[[paste0("tabla_container", currentTab(), sep="")]] <- renderUI({
         #dataTableOutput(ns(paste0("tabla_resultados", currentTab(), sep="")))
@@ -337,7 +273,7 @@ profesorServer <- function(id, user) {
       observeEvent(input[[paste0("toggle_cargar_reticulo", isolate(currentTab()), sep="")]], {
 
           showModal(modalDialog(
-            title = paste("Datos del retículo", isolate(currentTab())),
+            title = paste("Cargar retículo de la asignatura ", isolate(currentTab())),
             fileInput(ns(paste0("reticulo", isolate(currentTab()))), label = "Subir retículo"),
             div(
               actionButton(ns(paste0("cargar_reticulo", isolate(currentTab()))), label = "Cargar retículo",
@@ -389,9 +325,7 @@ profesorServer <- function(id, user) {
           update_test_question_number(isolate(currentTab()), n_questions)
         }
       })
-      
-      # Mostrar panel superpuesto con los datos del usuario al hacer clic en el ID
-      # Funcion que genere el informe sobre los cuestionarios, sacar paths del retÃ­culo
+
       observeEvent(input[[paste0(paste0("tabla_resultados", currentTab(), sep=""),"_rows_selected")]], {
         selected_row <- input[[paste0(paste0("tabla_resultados", currentTab(), sep=""),"_rows_selected")]]
         if (length(selected_row)>0) {
