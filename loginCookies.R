@@ -88,7 +88,6 @@ loginServer <- function(input, output, session) {
   
   observe({
     req(credenciales()$user_auth)
-    print(credenciales()$info)
     if(credenciales()$info[["change_pass"]] == 1){
       passServer("passUI", credenciales()$info[["user_id"]])
     }else{

@@ -2,11 +2,14 @@ library(shiny)
 library(shinyjs)
 library(RMySQL)
 
+
 # Conexión a la base de datos
 bd <- dbConnect(MySQL(), user = "root", password = "root", 
                 dbname = "appcuestionarios",
                 host = "localhost",
                 encoding = "latin1")
+
+
 
 ui <- fluidPage(
   useShinyjs(),

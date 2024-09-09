@@ -161,11 +161,11 @@ profesorServer <- function(id, user) {
     
       
       output[[paste0("tabla_container", currentTab(), sep="")]] <- renderUI({
-        #dataTableOutput(ns(paste0("tabla_resultados", currentTab(), sep="")))
+
       })
       
       output[[paste0("tabla_preguntas_container", currentTab(), sep="")]] <- renderUI({
-        #dataTableOutput(ns(paste0("tabla_preguntas", currentTab(), sep="")))
+
       })
       
       ## Tabla alumnos matriculados

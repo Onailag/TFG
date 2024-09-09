@@ -136,7 +136,7 @@ alumnoServer <- function(id, user) {
     id,
     function(input, output, session) {
       ns <- session$ns
-      print(user$user_id)
+
       currentTab <- reactive(input$alumnoTabSet)
       #currentTab <- debounce(currentTab, 500)
       #modoCuestionario <- reactiveVal(FALSE)
@@ -154,7 +154,7 @@ alumnoServer <- function(id, user) {
       
       
       output[[paste0("subject_name_panel_", isolate(currentTab()))]] <- renderText({
-        print(subject_data())
+
         paste("Nombre: ", 
               iconv(isolate(subject_data())$name, from = "UTF-8", to = "latin1"))
       })
@@ -288,7 +288,7 @@ alumnoServer <- function(id, user) {
             
             observeEvent(input$respuestas_seleccionadas, {
               selected_items <- input$respuestas_seleccionadas
-              print(selected_items)
+
               respuestas_seleccionadas[[paste0("respuestas_", isolate(pregunta_actual()))]] <- selected_items
               
               ## funcion actualizar boton
@@ -320,7 +320,6 @@ alumnoServer <- function(id, user) {
               insert_attempt_answers(attempt_id(), final_answers)
               calculate_results(attempt_id())
               score <- get_results(attempt_id())
-              print(score)
               if((score >= 5) & (!is.na(score)) ){
                 update_current_node(user$user_id, preguntas()$subject[1])
               }
@@ -389,29 +388,8 @@ alumnoServer <- function(id, user) {
       })
       
       output[[paste0("tabla_resultados", currentTab(), sep="")]] <- renderDataTable({
-        #usuarios
         get_test_attempt_table(user$user_id, currentTab())
       }, selection = 'single', rownames = FALSE)
-      
-      
-################################################################################
-      #options(encoding = 'utf8')
-      
-      
-
-      #preguntas <- dbGetQuery(bd, "SELECT * FROM Questions ORDER BY RAND() LIMIT 10")
-      
-      #### IMPORTANTE CHEQUEAR ICONV PARA RESOLVER EL ENCODING
-      #preguntas()$text <- iconv(preguntas()$text, from = "UTF-8", to = "latin1")
-      #num_preguntas <- nrow(preguntas())
-      
-      # Obtener respuestas de las preguntas seleccionadas de la base de datos
-
-      
-      
-      
-      
-      
 
     }
   )

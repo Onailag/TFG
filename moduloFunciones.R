@@ -21,7 +21,7 @@ updatePassword <- function(user, password, change = 0){
   querySql <- sqlInterpolate(conn, sql, pass = password, id = user, change = change)
   
   dbSendQuery(conn, querySql)
-  print("Password Updated")
+
   
   dbDisconnect(conn)
 }
@@ -60,7 +60,7 @@ get_users <- function(){
                     dbname = "appcuestionarios", host = "localhost")
   user_bd <- dbGetQuery(conn, "SELECT * FROM users;")
   dbDisconnect(conn)
-  print("User table provided")
+
   
   return(user_bd)
 }
@@ -547,7 +547,7 @@ update_test_question_number <- function(subject, nquestions){
     querySql <- sqlInterpolate(conn, querySql, nquestions, subject)
     
     dbSendQuery(conn, querySql)
-    print("ENTRO EN FUNC")
+
     dbDisconnect(conn)
 
   }, error = function(e) {
@@ -688,7 +688,7 @@ add_questions <- function(file, subject, content){
   question_queries <- apply(question_df, 1, function(row) {
     build_insert_query(row, "Questions")
   })
-  print(question_queries[1])
+
   lapply(question_queries, dbSendQuery, conn = conn)
   answer_df <- answer_df[,answer_col_ordered]
   #answer_df$content <- iconv(answer_df$content, from = "UTF-8", to = "latin1")
@@ -709,13 +709,13 @@ delete_questions_and_answers <- function(question, subject, content){
     sql <- "  DELETE FROM questions
     WHERE id = ? AND subject_code = ? AND content = ? ;"
     querySql <- sqlInterpolate(conn, sql, question, subject, content)
-    print(querySql)
+
     dbSendQuery(conn, querySql)
     
     sql <- "DELETE FROM answers
     WHERE question_id = ? AND subject_code = ? AND content = ? ;"
     querySql <- sqlInterpolate(conn, sql, question, subject, content)
-    print(querySql)
+
     dbSendQuery(conn, querySql)
     dbDisconnect(conn)
   }, error = function(e) {
@@ -748,7 +748,7 @@ parseLattice <- function(json_data, subject_code){
         })
       }
     }
-    print("Reticulo procesado")
+
     dbDisconnect(conn)
   })
 
@@ -813,7 +813,7 @@ get_average_score <- function(user, subject){
     dbDisconnect(conn)
     return(res$average_score)
   }, error = function(e) {
-    print( e$message)
+
     return(NULL)
   })
   return(result)
@@ -830,7 +830,7 @@ get_barplot_subject <- function(subject, content){
         SUM(CASE WHEN score > 9 THEN 1 ELSE 0 END) AS sobresalientes
     FROM test_attempts WHERE subject = ? AND content = ?;"
     querySql <- sqlInterpolate(conn, query, subject, content)
-    print(querySql)
+
     result <- dbGetQuery(conn, querySql)
     dbDisconnect(conn)
     
@@ -862,7 +862,7 @@ get_subject_data <- function(subject){
                       encoding = "ISO-8859-1")
     query <- "SELECT * FROM subjects WHERE subject_code = ? "
     querySql <- sqlInterpolate(conn, query, subject)
-    print(querySql)
+
     res <- dbGetQuery(conn, querySql)
     dbDisconnect(conn)
     return(res)
@@ -1004,7 +1004,7 @@ update_current_node <- function(user, subject){
   i <- 1
   while (!update_node & i <= length(children)) {
     if(all(get_node_attb(children[i], subject)  %in% passed_contents )){
-      print("Node update")
+
       update_node = TRUE
     }else{
       i <- i+1
@@ -1032,7 +1032,7 @@ get_current_node <- function(user, subject){
           subject_code = ? AND user_id = ? ;"
     
     querySql <- sqlInterpolate(conn, sql,  subject, user)
-    print(querySql)
+
     current_node <- dbGetQuery(conn, querySql)
     dbDisconnect(conn)
     return(current_node$current_node)
@@ -1100,12 +1100,12 @@ generate_attempt <- function(user, subject, content){
     content <- iconv(content, from = "latin1", to = "UTF-8")
     querySql <- sqlInterpolate(conn, sql, id = random_id, user = user, subject = subject,
                                content = content, date = as.character(now()))
-    print(querySql)
+
     dbSendQuery(conn, querySql)
     dbDisconnect(conn)
     return(random_id)
   }, error = function(e) {
-    print(e$message)
+
     return(NULL)
   }) 
   return(result)
@@ -1129,7 +1129,7 @@ get_questions <- function(attemtp_id, subject, content){
     
     querySql <- sqlInterpolate(conn, sql, subject = subject, content = content)
 
-    print(querySql)
+
     question_ids <- dbGetQuery(conn, querySql)
     
     for (question_id in question_ids$id) {
@@ -1139,7 +1139,7 @@ get_questions <- function(attemtp_id, subject, content){
         "INSERT INTO attempt_questions (attempt_id, question_id) VALUES (?, ?);",
         attemtp_id, question_id
       )
-      print(querySql)
+
       dbSendQuery(conn, querySql)
     }
     
@@ -1207,10 +1207,10 @@ calculate_results <- function(attempt_id){
     FROM attempt_questions aq
     JOIN questions q ON aq.question_id = q.id
     WHERE aq.attempt_id = ?attempt_id) tdg;"
-    print("aqui")
+
     querySql <- sqlInterpolate(conn, sql, attempt_id =attempt_id)
     results <- dbGetQuery(conn, querySql)
-    print(results)
+
     sql <- "UPDATE test_attempts SET score = ? , correct = ? , incorrect = ?
       WHERE id = ?;"
     querySql <- sqlInterpolate(conn, sql, results$score, results$correct_answers, results$incorrect_answers, attempt_id)
