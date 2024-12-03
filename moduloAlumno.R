@@ -15,7 +15,7 @@ mytabAlumno <- function(tabName, id, user){
       mainPanel(
         h4(paste0("Panel de la asignatura ", tabName)), 
         
-        useShinyjs(),  # Inicializar shinyjs
+        useShinyjs(),  
         verbatimTextOutput(ns(paste0("subject_name_panel_", tabName))),
         verbatimTextOutput(ns(paste0("subject_description_panel_", tabName))),
         verbatimTextOutput(ns(paste0("subject_average_panel_", tabName))),
@@ -175,7 +175,7 @@ alumnoServer <- function(id, user) {
         if (!is.null(currentTab()) && (!currentTab() %in% c("Home", "Cuestionario")))  {
           get_attb(isolate(currentTab()))
         } else {
-          list("home")  # Devuelve una lista vacía si el tab es "Home"
+          list("home")  
         }
       })
       
@@ -235,7 +235,7 @@ alumnoServer <- function(id, user) {
             
             
             output$respuestas <- renderUI({
-              pregunta_actual <- pregunta_actual()  # Almacenamos la pregunta actual
+              pregunta_actual <- pregunta_actual()
               withMathJax()
               checkboxGroupInput(inputId = ns("respuestas_seleccionadas"),
                                  label = NULL,
@@ -291,7 +291,7 @@ alumnoServer <- function(id, user) {
 
               respuestas_seleccionadas[[paste0("respuestas_", isolate(pregunta_actual()))]] <- selected_items
               
-              ## funcion actualizar boton
+              
               if(length(selected_items > 0)){
                 runjs(sprintf('document.getElementById("%s%d").style.backgroundColor = "#A9CDF0";',
                               ns("btn_pregunta_"), isolate(pregunta_actual())))
@@ -339,7 +339,7 @@ alumnoServer <- function(id, user) {
               observeEvent(input$close_results, {
                 session$reload() 
               })
-              #session$reload() cuando se pulse el boton de cerrar el dialog de puntuacion, reload
+              
             },  ignoreNULL = TRUE, ignoreInit = TRUE)
             
           })
@@ -354,7 +354,7 @@ alumnoServer <- function(id, user) {
         show_panel2 <- length(get_best_grade_content(user$user_id, currentTab(), 7)) > 0
         show_panel1 <- length(get_best_grade_content(user$user_id, currentTab(), 5)) > 0
         
-        # Mostrar u ocultar los paneles basados en las condiciones
+        
         shinyjs::toggle(paste0("panel1",currentTab()), condition = show_panel1)
         shinyjs::toggle(paste0("panel2",currentTab()), condition = show_panel2)
         shinyjs::toggle(paste0("panel3",currentTab()), condition = show_panel3)
